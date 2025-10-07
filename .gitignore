@@ -1,0 +1,45 @@
+# Project-specific documentation
+CLAUDE.md
+PROJECT_STATUS.md
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+dist-ssr/
+*.local
+
+# Tauri build outputs
+src-tauri/target/
+src-tauri/WixTools/
+
+# Environment and logs
+.env
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor directories
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Rust
+**/*.rs.bk
+*.pdb
+Cargo.lock
