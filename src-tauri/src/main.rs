@@ -3,7 +3,7 @@
 
 mod state;
 
-use state::{Entity, AppState};
+use state::{Entity, Marker, FieldChange, MarkerVisual, AppState};
 use std::collections::HashMap;
 
 // Tauri command to get all entities
@@ -23,10 +23,10 @@ fn get_entity_state(
     let entities = state.entities.lock().unwrap();
     let markers = state.markers.lock().unwrap();
 
-    // Find the entity
-    let entity = entities
-        .get(&entity_id)
-        .ok_or_else(|| "Entity not found".to_string())?;
+    // Verify entity exists
+    if !entities.contains_key(&entity_id) {
+        return Err("Entity not found".to_string());
+    }
 
     // Get all markers for this entity before the position
     let mut relevant_markers: Vec<_> = markers
@@ -43,23 +43,28 @@ fn get_entity_state(
     // Apply each marker's changes
     for marker in relevant_markers {
         for change in &marker.changes {
-            // For now, just set the values directly
-            // TODO: Implement proper tree merging and relative changes
-            let value = match &change.change_type {
-                state::ChangeType::Absolute(val) => {
-                    match val {
-                        state::StateValue::Number(n) => serde_json::json!(n),
-                        state::StateValue::Text(s) => serde_json::json!(s),
-                        state::StateValue::Boolean(b) => serde_json::json!(b),
-                    }
+            let value = if change.change_type == "absolute" {
+                // Try to parse as number, otherwise treat as string
+                if let Ok(num) = change.value.parse::<f64>() {
+                    serde_json::json!(num)
+                } else if change.value == "true" || change.value == "false" {
+                    serde_json::json!(change.value.parse::<bool>().unwrap())
+                } else {
+                    serde_json::json!(change.value)
                 }
-                state::ChangeType::Relative(delta) => {
-                    // For now, just store the delta as a number
-                    // TODO: Implement proper relative value computation
-                    serde_json::json!(delta)
+            } else {
+                // Relative change - add to existing value
+                if let Ok(delta) = change.value.parse::<f64>() {
+                    let current_val = current_state
+                        .get(&change.field_name)
+                        .and_then(|v| v.as_f64())
+                        .unwrap_or(0.0);
+                    serde_json::json!(current_val + delta)
+                } else {
+                    serde_json::json!(change.value)
                 }
             };
-            current_state.insert(change.field_path.join("."), value);
+            current_state.insert(change.field_name.clone(), value);
         }
     }
 
@@ -73,15 +78,60 @@ fn create_entity(
     state: tauri::State<AppState>,
 ) -> Result<Entity, String> {
     let mut entities = state.entities.lock().unwrap();
-    
+
     let entity = Entity {
         id: uuid::Uuid::new_v4().to_string(),
         name,
     };
-    
+
     entities.insert(entity.id.clone(), entity.clone());
-    
+
     Ok(entity)
+}
+
+// Tauri command to insert a marker
+#[tauri::command]
+fn insert_marker(
+    position: usize,
+    entity_id: String,
+    changes: Vec<FieldChange>,
+    visual: MarkerVisual,
+    state: tauri::State<AppState>,
+) -> Result<Marker, String> {
+    let mut markers = state.markers.lock().unwrap();
+
+    let marker = Marker {
+        id: uuid::Uuid::new_v4().to_string(),
+        position,
+        entity_id,
+        changes,
+        visual,
+    };
+
+    markers.insert(marker.id.clone(), marker.clone());
+
+    Ok(marker)
+}
+
+// Tauri command to get all markers
+#[tauri::command]
+fn get_all_markers(state: tauri::State<AppState>) -> Vec<Marker> {
+    let markers = state.markers.lock().unwrap();
+    markers.values().cloned().collect()
+}
+
+// Tauri command to get markers at a specific position
+#[tauri::command]
+fn get_markers_at_position(
+    position: usize,
+    state: tauri::State<AppState>,
+) -> Vec<Marker> {
+    let markers = state.markers.lock().unwrap();
+    markers
+        .values()
+        .filter(|m| m.position == position)
+        .cloned()
+        .collect()
 }
 
 fn main() {
@@ -105,6 +155,9 @@ fn main() {
             get_all_entities,
             get_entity_state,
             create_entity,
+            insert_marker,
+            get_all_markers,
+            get_markers_at_position,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

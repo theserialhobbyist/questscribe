@@ -182,7 +182,7 @@ body.dark-mode .btn-secondary {
 
 .editor-container {
   flex: 1;
-  overflow: auto;
+  overflow: hidden;
   background-color: white;
   display: flex;
   flex-direction: column;
@@ -195,6 +195,9 @@ body.dark-mode .btn-secondary {
   background-color: #f8f9fa;
   border-bottom: 1px solid #dee2e6;
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .editor-toolbar button {
@@ -230,6 +233,7 @@ body.dark-mode .btn-secondary {
   padding: 20px;
   width: 100%;
   flex: 1;
+  overflow-y: auto;
 }
 
 .ProseMirror {
@@ -408,4 +412,332 @@ body.dark-mode .btn-secondary {
 
 .btn-secondary:hover {
   background-color: #5a6268;
+}
+
+/* Modal Dialog Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #ddd;
+}
+
+.modal-header h2 {
+  font-size: 18px;
+  margin: 0;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.close-button:hover {
+  color: #333;
+}
+
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 20px;
+  border-top: 1px solid #ddd;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #333;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-group input:disabled {
+  background-color: #f5f5f5;
+  color: #666;
+}
+
+/* Field Editor */
+.fields-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.field-row input,
+.field-row select {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.btn-remove {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.btn-remove:hover {
+  background-color: #c82333;
+}
+
+.btn-add-field {
+  width: 100%;
+  padding: 8px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-add-field:hover {
+  background-color: #0056b3;
+}
+
+/* Marker Appearance */
+.marker-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+.sub-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #666;
+}
+
+.icon-picker,
+.color-picker {
+  margin-bottom: 15px;
+}
+
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.icon-option {
+  padding: 8px;
+  background-color: #f8f9fa;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 20px;
+  transition: all 0.2s;
+}
+
+.icon-option:hover {
+  background-color: #e9ecef;
+}
+
+.icon-option.selected {
+  border-color: #007bff;
+  background-color: #e7f3ff;
+}
+
+.custom-icon-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.color-option {
+  width: 100%;
+  height: 40px;
+  border: 3px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.color-option:hover {
+  transform: scale(1.1);
+}
+
+.color-option.selected {
+  border-color: #333;
+  box-shadow: 0 0 0 2px white, 0 0 0 4px #333;
+}
+
+.custom-color-input {
+  width: 100%;
+  height: 40px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Dark Mode for Modal */
+body.dark-mode .modal-content {
+  background-color: #2d2d2d;
+  color: #e0e0e0;
+}
+
+body.dark-mode .modal-header {
+  border-bottom-color: #3d3d3d;
+}
+
+body.dark-mode .modal-header h2 {
+  color: #e0e0e0;
+}
+
+body.dark-mode .close-button {
+  color: #999;
+}
+
+body.dark-mode .close-button:hover {
+  color: #e0e0e0;
+}
+
+body.dark-mode .modal-footer {
+  border-top-color: #3d3d3d;
+}
+
+body.dark-mode .form-group label {
+  color: #e0e0e0;
+}
+
+body.dark-mode .form-group input,
+body.dark-mode .form-group select {
+  background-color: #3d3d3d;
+  color: #e0e0e0;
+  border-color: #4d4d4d;
+}
+
+body.dark-mode .form-group input:disabled {
+  background-color: #252525;
+  color: #999;
+}
+
+body.dark-mode .field-row input,
+body.dark-mode .field-row select {
+  background-color: #3d3d3d;
+  color: #e0e0e0;
+  border-color: #4d4d4d;
+}
+
+body.dark-mode .marker-preview {
+  background-color: #252525;
+}
+
+body.dark-mode .sub-label {
+  color: #999;
+}
+
+body.dark-mode .icon-option {
+  background-color: #3d3d3d;
+  border-color: transparent;
+}
+
+body.dark-mode .icon-option:hover {
+  background-color: #4d4d4d;
+}
+
+body.dark-mode .icon-option.selected {
+  border-color: #0d6efd;
+  background-color: #1a3a5c;
+}
+
+body.dark-mode .color-option.selected {
+  border-color: #e0e0e0;
+  box-shadow: 0 0 0 2px #2d2d2d, 0 0 0 4px #e0e0e0;
+}
+
+body.dark-mode .custom-icon-input,
+body.dark-mode .custom-color-input {
+  background-color: #3d3d3d;
+  color: #e0e0e0;
+  border-color: #4d4d4d;
 }

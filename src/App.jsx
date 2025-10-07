@@ -1,13 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/tauri'
 import Editor from './components/Editor'
 import Sidebar from './components/Sidebar'
+import MarkerDialog from './components/MarkerDialog'
 
 function App() {
   const [currentEntity, setCurrentEntity] = useState(null)
   const [entities, setEntities] = useState([])
   const [cursorPosition, setCursorPosition] = useState(0)
   const [darkMode, setDarkMode] = useState(false)
+  const [isMarkerDialogOpen, setIsMarkerDialogOpen] = useState(false)
+  const editorRef = useRef(null)
 
   // Apply dark mode class to body
   useEffect(() => {
@@ -22,6 +25,25 @@ function App() {
   useEffect(() => {
     loadEntities()
   }, [])
+
+  // Load markers when editor is ready
+  const loadMarkers = useCallback(async () => {
+    try {
+      const markers = await invoke('get_all_markers')
+      // Add each marker to the editor
+      if (editorRef.current) {
+        markers.forEach(marker => {
+          editorRef.current.insertMarker(marker)
+        })
+      }
+    } catch (error) {
+      console.error('Failed to load markers:', error)
+    }
+  }, [])
+
+  const handleEditorReady = useCallback(() => {
+    loadMarkers()
+  }, [loadMarkers])
 
   const loadEntities = useCallback(async () => {
     try {
@@ -40,6 +62,15 @@ function App() {
     setCursorPosition(position)
   }, [])
 
+  const handleMarkerInserted = useCallback((marker) => {
+    // Add marker to editor
+    if (editorRef.current) {
+      editorRef.current.insertMarker(marker)
+    }
+    // Force sidebar to refresh by updating cursor position
+    setCursorPosition(cursorPosition => cursorPosition)
+  }, [])
+
   return (
     <div className="app">
       <div className="toolbar">
@@ -47,7 +78,7 @@ function App() {
         <button onClick={() => console.log('New document')}>New</button>
         <button onClick={() => console.log('Open document')}>Open</button>
         <button onClick={() => console.log('Save document')}>Save</button>
-        <button onClick={() => console.log('Insert marker')}>Insert State Change</button>
+        <button onClick={() => setIsMarkerDialogOpen(true)}>Insert State Change</button>
         <div style={{ flex: 1 }} />
         <button 
           onClick={() => setDarkMode(!darkMode)}
@@ -58,11 +89,13 @@ function App() {
       </div>
       
       <div className="main-content">
-        <Editor 
+        <Editor
+          ref={editorRef}
           onCursorMove={handleCursorMove}
+          onEditorReady={handleEditorReady}
         />
         
-        <Sidebar 
+        <Sidebar
           entities={entities}
           currentEntity={currentEntity}
           cursorPosition={cursorPosition}
@@ -70,6 +103,14 @@ function App() {
           onEntitiesRefresh={loadEntities}
         />
       </div>
+
+      <MarkerDialog
+        isOpen={isMarkerDialogOpen}
+        onClose={() => setIsMarkerDialogOpen(false)}
+        entities={entities}
+        cursorPosition={cursorPosition}
+        onMarkerInserted={handleMarkerInserted}
+      />
     </div>
   )
 }
