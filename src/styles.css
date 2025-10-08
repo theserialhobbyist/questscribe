@@ -39,6 +39,10 @@ body.dark-mode .toolbar button:hover {
   background-color: #4d4d4d;
 }
 
+body.dark-mode .toolbar-divider {
+  background-color: #555;
+}
+
 body.dark-mode .editor-container {
   background-color: #252525;
 }
@@ -172,6 +176,13 @@ body.dark-mode .btn-secondary {
 
 .toolbar button:hover {
   background-color: #0056b3;
+}
+
+.toolbar-divider {
+  width: 2px;
+  height: 24px;
+  background-color: #ccc;
+  margin: 0 5px;
 }
 
 .main-content {

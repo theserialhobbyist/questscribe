@@ -39,7 +39,7 @@ function insertChapterBreak(view) {
   view.focus()
 }
 
-function EditorToolbar({ editorView }) {
+function EditorToolbar({ editorView, onInsertStateChange }) {
   const [, forceUpdate] = React.useReducer(x => x + 1, 0)
 
   // Re-render toolbar when selection changes
@@ -200,6 +200,20 @@ function EditorToolbar({ editorView }) {
         title="Chapter Break"
       >
         # # #
+      </button>
+
+      <div className="toolbar-separator" />
+
+      <button
+        onMouseDown={(e) => {
+          e.preventDefault()
+          if (onInsertStateChange) {
+            onInsertStateChange()
+          }
+        }}
+        title="Insert State Change"
+      >
+        ✨ State Change
       </button>
     </div>
   )

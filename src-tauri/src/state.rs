@@ -31,6 +31,14 @@ pub struct MarkerVisual {
     pub color: String, // Hex color like "#FFD700"
 }
 
+// Document structure for saving/loading
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Document {
+    pub content: String,  // The text content
+    pub entities: Vec<Entity>,
+    pub markers: Vec<Marker>,
+}
+
 // Application state
 pub struct AppState {
     pub entities: Mutex<HashMap<String, Entity>>,

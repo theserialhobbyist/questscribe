@@ -43,3 +43,4 @@ Thumbs.db
 **/*.rs.bk
 *.pdb
 Cargo.lock
+nul

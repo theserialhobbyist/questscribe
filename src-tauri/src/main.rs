@@ -3,8 +3,12 @@
 
 mod state;
 
-use state::{Entity, Marker, FieldChange, MarkerVisual, AppState};
+use state::{Entity, Marker, FieldChange, MarkerVisual, Document, AppState};
 use std::collections::HashMap;
+use std::fs;
+use std::path::PathBuf;
+use std::io::Cursor;
+use docx_rs::*;
 
 // Tauri command to get all entities
 #[tauri::command]
@@ -134,6 +138,404 @@ fn get_markers_at_position(
         .collect()
 }
 
+// Tauri command to save document
+#[tauri::command]
+fn save_document(
+    file_path: String,
+    content: String,
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    let entities = state.entities.lock().unwrap();
+    let markers = state.markers.lock().unwrap();
+
+    let document = Document {
+        content,
+        entities: entities.values().cloned().collect(),
+        markers: markers.values().cloned().collect(),
+    };
+
+    let json = serde_json::to_string_pretty(&document)
+        .map_err(|e| format!("Failed to serialize document: {}", e))?;
+
+    fs::write(&file_path, json)
+        .map_err(|e| format!("Failed to write file: {}", e))?;
+
+    Ok(())
+}
+
+// Tauri command to load document
+#[tauri::command]
+fn load_document(
+    file_path: String,
+    state: tauri::State<AppState>,
+) -> Result<Document, String> {
+    let json = fs::read_to_string(&file_path)
+        .map_err(|e| format!("Failed to read file: {}", e))?;
+
+    let document: Document = serde_json::from_str(&json)
+        .map_err(|e| format!("Failed to parse document: {}", e))?;
+
+    // Clear and load entities
+    let mut entities = state.entities.lock().unwrap();
+    entities.clear();
+    for entity in &document.entities {
+        entities.insert(entity.id.clone(), entity.clone());
+    }
+
+    // Clear and load markers
+    let mut markers = state.markers.lock().unwrap();
+    markers.clear();
+    for marker in &document.markers {
+        markers.insert(marker.id.clone(), marker.clone());
+    }
+
+    Ok(document)
+}
+
+// Tauri command to create new document (clear everything)
+#[tauri::command]
+fn new_document(state: tauri::State<AppState>) -> Result<(), String> {
+    let mut entities = state.entities.lock().unwrap();
+    let mut markers = state.markers.lock().unwrap();
+
+    entities.clear();
+    markers.clear();
+
+    Ok(())
+}
+
+// Represents a text run with formatting
+#[derive(Clone)]
+struct TextRun {
+    text: String,
+    bold: bool,
+    italic: bool,
+}
+
+// Represents a paragraph with its type and runs
+struct FormattedParagraph {
+    node_type: String, // "paragraph" or "heading"
+    level: Option<u32>, // heading level (1-6)
+    runs: Vec<TextRun>,
+}
+
+// Helper function to convert ProseMirror JSON to structured format
+fn prosemirror_to_structured(doc_json: &serde_json::Value) -> (String, Vec<FormattedParagraph>) {
+    let mut paragraphs = Vec::new();
+    let mut plain_text_parts = Vec::new();
+
+    if let Some(content) = doc_json.get("content").and_then(|c| c.as_array()) {
+        for node in content {
+            let node_type = node.get("type").and_then(|t| t.as_str()).unwrap_or("");
+
+            match node_type {
+                "paragraph" | "heading" => {
+                    let runs = extract_runs_from_node(node);
+                    let level = if node_type == "heading" {
+                        node.get("attrs")
+                            .and_then(|a| a.get("level"))
+                            .and_then(|l| l.as_u64())
+                            .map(|l| l as u32)
+                    } else {
+                        None
+                    };
+
+                    // Build plain text
+                    let para_text: String = runs.iter().map(|r| r.text.as_str()).collect();
+                    plain_text_parts.push(para_text);
+
+                    paragraphs.push(FormattedParagraph {
+                        node_type: node_type.to_string(),
+                        level,
+                        runs,
+                    });
+                }
+                _ => {}
+            }
+        }
+    }
+
+    let plain_text = plain_text_parts.join("\n\n");
+    (plain_text, paragraphs)
+}
+
+fn extract_runs_from_node(node: &serde_json::Value) -> Vec<TextRun> {
+    let mut runs = Vec::new();
+
+    if let Some(content) = node.get("content").and_then(|c| c.as_array()) {
+        for item in content {
+            if let Some(text_content) = item.get("text").and_then(|t| t.as_str()) {
+                let mut bold = false;
+                let mut italic = false;
+
+                if let Some(marks) = item.get("marks").and_then(|m| m.as_array()) {
+                    for mark in marks {
+                        if let Some(mark_type) = mark.get("type").and_then(|t| t.as_str()) {
+                            match mark_type {
+                                "strong" => bold = true,
+                                "em" => italic = true,
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+
+                runs.push(TextRun {
+                    text: text_content.to_string(),
+                    bold,
+                    italic,
+                });
+            }
+        }
+    }
+
+    // If no runs, add an empty one
+    if runs.is_empty() {
+        runs.push(TextRun {
+            text: String::new(),
+            bold: false,
+            italic: false,
+        });
+    }
+
+    runs
+}
+
+// Tauri command to export document to various formats
+#[tauri::command]
+fn export_document(
+    file_path: String,
+    content: String,
+) -> Result<(), String> {
+    let path = PathBuf::from(&file_path);
+    let extension = path.extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("txt");
+
+    // Parse ProseMirror JSON
+    let doc_json: serde_json::Value = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse document JSON: {}", e))?;
+
+    let (plain_text, paragraphs) = prosemirror_to_structured(&doc_json);
+
+    match extension {
+        "txt" => {
+            fs::write(&file_path, plain_text)
+                .map_err(|e| format!("Failed to write file: {}", e))?;
+        }
+        "rtf" => {
+            let mut rtf_content = String::from("{\\rtf1\\ansi\\deff0\n{\\fonttbl{\\f0 Times New Roman;}}\n\\f0\\fs24\n");
+
+            for para in paragraphs {
+                // Handle headings with larger font size
+                if para.node_type == "heading" {
+                    let font_size = match para.level {
+                        Some(1) => 32,
+                        Some(2) => 28,
+                        Some(3) => 24,
+                        _ => 20,
+                    };
+                    rtf_content.push_str(&format!("\\fs{} \\b ", font_size));
+                }
+
+                // Process each text run with its own formatting
+                for run in &para.runs {
+                    if run.bold {
+                        rtf_content.push_str("\\b ");
+                    }
+                    if run.italic {
+                        rtf_content.push_str("\\i ");
+                    }
+                    rtf_content.push_str(&run.text.replace("\\", "\\\\").replace("{", "\\{").replace("}", "\\}"));
+                    if run.italic {
+                        rtf_content.push_str("\\i0 ");
+                    }
+                    if run.bold {
+                        rtf_content.push_str("\\b0 ");
+                    }
+                }
+
+                // Reset heading formatting
+                if para.node_type == "heading" {
+                    rtf_content.push_str("\\b0 \\fs24 ");
+                }
+
+                rtf_content.push_str("\\par\n\\par\n");
+            }
+
+            rtf_content.push_str("}");
+
+            fs::write(&file_path, rtf_content)
+                .map_err(|e| format!("Failed to write file: {}", e))?;
+        }
+        "docx" => {
+            let mut docx = Docx::new();
+
+            for para in paragraphs {
+                let mut paragraph = Paragraph::new();
+
+                // Determine font size for headings
+                let is_heading = para.node_type == "heading";
+                let font_size = if is_heading {
+                    match para.level {
+                        Some(1) => 32,
+                        Some(2) => 28,
+                        Some(3) => 24,
+                        _ => 20,
+                    }
+                } else {
+                    24 // Default body text size (12pt * 2 = 24 half-points)
+                };
+
+                // Add each text run with its own formatting
+                for run in &para.runs {
+                    let mut text_run = Run::new()
+                        .add_text(&run.text)
+                        .size(font_size);
+
+                    // For headings, make all text bold
+                    if is_heading || run.bold {
+                        text_run = text_run.bold();
+                    }
+                    if run.italic {
+                        text_run = text_run.italic();
+                    }
+
+                    paragraph = paragraph.add_run(text_run);
+                }
+
+                docx = docx.add_paragraph(paragraph);
+            }
+
+            // Write to a buffer using Cursor for Seek trait
+            let mut buf = Cursor::new(Vec::new());
+            docx.build()
+                .pack(&mut buf)
+                .map_err(|e| format!("Failed to pack DOCX: {}", e))?;
+
+            fs::write(&file_path, buf.into_inner())
+                .map_err(|e| format!("Failed to write file: {}", e))?;
+        }
+        _ => {
+            return Err(format!("Unsupported file format: {}", extension));
+        }
+    }
+
+    Ok(())
+}
+
+// Tauri command to import document from RTF or DOCX
+#[tauri::command]
+fn import_document(file_path: String) -> Result<String, String> {
+    let path = PathBuf::from(&file_path);
+    let extension = path.extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("txt");
+
+    match extension {
+        "txt" => {
+            // Plain text - just read and convert to ProseMirror JSON
+            let content = fs::read_to_string(&file_path)
+                .map_err(|e| format!("Failed to read file: {}", e))?;
+
+            Ok(text_to_prosemirror(&content))
+        }
+        "rtf" => {
+            // Basic RTF text extraction (formatting will be lost)
+            let content = fs::read_to_string(&file_path)
+                .map_err(|e| format!("Failed to read file: {}", e))?;
+
+            let text = extract_text_from_rtf(&content);
+            Ok(text_to_prosemirror(&text))
+        }
+        "docx" | "doc" => {
+            // DOCX/DOC files are binary and cannot be imported without a parsing library
+            // Due to compatibility issues with available Rust libraries, DOCX import is not currently supported
+            Err("DOCX/DOC import is not currently supported. Please export your document as plain text (.txt) or RTF (.rtf) first, then import it.".to_string())
+        }
+        _ => {
+            Err(format!("Unsupported file format: {}", extension))
+        }
+    }
+}
+
+// Basic RTF text extraction - strips RTF control codes
+fn extract_text_from_rtf(rtf: &str) -> String {
+    let mut result = String::new();
+    let mut in_control = false;
+    let mut in_group: i32 = 0;
+    let mut chars = rtf.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        match ch {
+            '{' => {
+                in_group += 1;
+            }
+            '}' => {
+                in_group = in_group.saturating_sub(1);
+            }
+            '\\' => {
+                // Skip control word
+                in_control = true;
+                while let Some(&next_ch) = chars.peek() {
+                    if next_ch.is_alphabetic() || next_ch == '-' || next_ch.is_numeric() {
+                        chars.next();
+                    } else {
+                        if next_ch == ' ' {
+                            chars.next(); // consume delimiter space
+                        }
+                        break;
+                    }
+                }
+                in_control = false;
+
+                // Handle special RTF escapes
+                if let Some(&next_ch) = chars.peek() {
+                    match next_ch {
+                        '\\' | '{' | '}' => {
+                            result.push(chars.next().unwrap());
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            _ if !in_control && in_group <= 2 => {
+                // Only include text in main content (group level 1-2)
+                result.push(ch);
+            }
+            _ => {}
+        }
+    }
+
+    result.trim().to_string()
+}
+
+// Helper to convert plain text to ProseMirror JSON
+fn text_to_prosemirror(text: &str) -> String {
+    let mut paragraphs = Vec::new();
+
+    for line in text.split("\n\n") {
+        if line.trim().is_empty() {
+            continue;
+        }
+
+        paragraphs.push(serde_json::json!({
+            "type": "paragraph",
+            "content": [{
+                "type": "text",
+                "text": line.trim()
+            }]
+        }));
+    }
+
+    let doc = serde_json::json!({
+        "type": "doc",
+        "content": paragraphs
+    });
+
+    serde_json::to_string(&doc).unwrap()
+}
+
 fn main() {
     // Initialize app state
     let app_state = AppState::new();
@@ -158,6 +560,11 @@ fn main() {
             insert_marker,
             get_all_markers,
             get_markers_at_position,
+            save_document,
+            load_document,
+            new_document,
+            export_document,
+            import_document,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
