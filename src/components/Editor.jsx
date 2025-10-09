@@ -268,13 +268,31 @@ const Editor = forwardRef(({ onCursorMove, onWordCountChange, onEditorReady, onI
       const docChanged = transactions.some(tr => tr.docChanged)
       if (!docChanged) return null
 
+      // Build sets of marker IDs in old and new documents
+      const oldMarkerIds = new Set()
+      const newMarkerIds = new Set()
       const positionUpdates = []
 
-      // Find all marker nodes and their positions
+      oldState.doc.descendants((node) => {
+        if (node.type.name === 'marker') {
+          oldMarkerIds.add(node.attrs.id)
+        }
+      })
+
       newState.doc.descendants((node, pos) => {
         if (node.type.name === 'marker') {
+          newMarkerIds.add(node.attrs.id)
           positionUpdates.push([node.attrs.id, pos])
         }
+      })
+
+      // Detect deleted markers
+      const deletedMarkerIds = [...oldMarkerIds].filter(id => !newMarkerIds.has(id))
+
+      // Delete markers from backend
+      deletedMarkerIds.forEach(markerId => {
+        invoke('delete_marker', { markerId })
+          .catch(err => console.error('Failed to delete marker:', err))
       })
 
       // Update positions in backend
