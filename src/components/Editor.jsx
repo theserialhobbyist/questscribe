@@ -229,6 +229,29 @@ const Editor = forwardRef(({ onCursorMove, onWordCountChange, onEditorReady, onI
         view.dispatch(tr)
         view.focus()
       }
+    },
+    insertText: (text) => {
+      if (!viewRef.current) return
+      const view = viewRef.current
+      const { from } = view.state.selection
+
+      // Split text into lines and create paragraph nodes
+      const lines = text.split('\n')
+      const nodes = lines.map(line =>
+        markerSchema.nodes.paragraph.create(
+          null,
+          line ? [markerSchema.text(line)] : []
+        )
+      )
+
+      // Insert paragraphs at cursor
+      const tr = view.state.tr.replaceWith(
+        from,
+        from,
+        nodes
+      )
+      view.dispatch(tr)
+      view.focus()
     }
   }))
 

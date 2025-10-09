@@ -120,6 +120,18 @@ body.dark-mode .sidebar-position {
   color: #999;
 }
 
+body.dark-mode .insert-sheet-btn {
+  background-color: #45a049;
+}
+
+body.dark-mode .insert-sheet-btn:hover {
+  background-color: #4CAF50;
+}
+
+body.dark-mode .insert-sheet-btn:active {
+  background-color: #3d8b40;
+}
+
 body.dark-mode .sidebar-sort-controls {
   background-color: #252525;
   border-bottom-color: #3d3d3d;
@@ -386,6 +398,28 @@ body.dark-mode .btn-danger {
   font-size: 12px;
   color: #666;
   border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.insert-sheet-btn {
+  padding: 4px 10px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.insert-sheet-btn:hover {
+  background-color: #45a049;
+}
+
+.insert-sheet-btn:active {
+  background-color: #3d8b40;
 }
 
 .sidebar-sort-controls {

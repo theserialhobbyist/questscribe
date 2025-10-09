@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/tauri'
 import { ask } from '@tauri-apps/api/dialog'
 
-function Sidebar({ entities, currentEntity, cursorPosition, onEntityChange, onEntitiesRefresh }) {
+function Sidebar({ entities, currentEntity, cursorPosition, onEntityChange, onEntitiesRefresh, onInsertCharacterSheet }) {
   const [entityState, setEntityState] = useState(null)
   const [loading, setLoading] = useState(false)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
@@ -363,6 +363,15 @@ function Sidebar({ entities, currentEntity, cursorPosition, onEntityChange, onEn
 
       <div className="sidebar-position">
         Position: Character {cursorPosition}
+        {currentEntity && (
+          <button
+            className="insert-sheet-btn"
+            onClick={() => onInsertCharacterSheet(currentEntity)}
+            title="Insert character sheet at cursor"
+          >
+            📄 Insert Sheet
+          </button>
+        )}
       </div>
 
       {currentEntity && (

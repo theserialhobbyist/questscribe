@@ -105,6 +105,91 @@ fn get_all_entities(state: tauri::State<AppState>) -> Vec<Entity> {
     entities.values().cloned().collect()
 }
 
+// Helper function to format a state object as a character sheet string
+fn format_state_as_sheet(state: &serde_json::Map<String, serde_json::Value>, indent: usize) -> String {
+    let mut lines = Vec::new();
+    let indent_str = "  ".repeat(indent);
+
+    for (key, value) in state.iter() {
+        if let Some(obj) = value.as_object() {
+            // Nested category
+            lines.push(format!("{}{}", indent_str, key));
+            lines.push(format_state_as_sheet(obj, indent + 1));
+        } else {
+            // Value
+            lines.push(format!("{}{}: {}", indent_str, key, value));
+        }
+    }
+
+    lines.join("\n")
+}
+
+// Tauri command to get entity state formatted as a character sheet
+#[tauri::command]
+fn format_character_sheet(
+    entity_id: String,
+    position: usize,
+    state: tauri::State<AppState>,
+) -> Result<String, String> {
+    let entities = state.entities.lock().unwrap();
+    let markers = state.markers.lock().unwrap();
+
+    // Get entity
+    let entity = entities
+        .get(&entity_id)
+        .ok_or("Entity not found")?;
+
+    // Get all markers for this entity up to the position
+    let mut relevant_markers: Vec<&Marker> = markers
+        .values()
+        .filter(|m| m.entity_id == entity_id && m.position <= position)
+        .collect();
+
+    // Sort by position
+    relevant_markers.sort_by_key(|m| m.position);
+
+    // Start with empty state (use Map for nested structure support)
+    let mut current_state = serde_json::Map::new();
+
+    // Apply each marker's changes
+    for marker in relevant_markers {
+        for change in &marker.changes {
+            match &change.change_type {
+                ChangeType::Remove => {
+                    remove_nested_value(&mut current_state, &change.field_name);
+                }
+                ChangeType::Absolute => {
+                    let value = if let Ok(num) = change.value.parse::<f64>() {
+                        serde_json::json!(num)
+                    } else if change.value == "true" || change.value == "false" {
+                        serde_json::json!(change.value.parse::<bool>().unwrap())
+                    } else {
+                        serde_json::json!(change.value)
+                    };
+                    set_nested_value(&mut current_state, &change.field_name, value);
+                }
+                ChangeType::Relative => {
+                    let value = if let Ok(delta) = change.value.parse::<f64>() {
+                        let current_val = get_nested_value(&current_state, &change.field_name)
+                            .and_then(|v| v.as_f64())
+                            .unwrap_or(0.0);
+                        serde_json::json!(current_val + delta)
+                    } else {
+                        serde_json::json!(change.value)
+                    };
+                    set_nested_value(&mut current_state, &change.field_name, value);
+                }
+            }
+        }
+    }
+
+    // Format as character sheet
+    let mut sheet = format!("=== {} ===\n", entity.name);
+    sheet.push_str(&format_state_as_sheet(&current_state, 0));
+
+    Ok(sheet)
+}
+
 // Tauri command to get entity state at a position
 #[tauri::command]
 fn get_entity_state(
@@ -917,6 +1002,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             get_all_entities,
             get_entity_state,
+            format_character_sheet,
             create_entity,
             update_entity,
             delete_entity,

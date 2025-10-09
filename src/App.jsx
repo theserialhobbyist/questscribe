@@ -259,6 +259,22 @@ function App() {
     }
   }, [])
 
+  const handleInsertCharacterSheet = useCallback(async (entityId) => {
+    if (!editorRef.current) return
+
+    try {
+      const sheet = await invoke('format_character_sheet', {
+        entityId,
+        position: cursorPosition
+      })
+
+      editorRef.current.insertText(sheet)
+    } catch (error) {
+      console.error('Failed to insert character sheet:', error)
+      alert('Failed to insert character sheet: ' + error)
+    }
+  }, [cursorPosition])
+
   return (
     <div className="app">
       <div className="toolbar">
@@ -293,6 +309,7 @@ function App() {
           cursorPosition={cursorPosition}
           onEntityChange={setCurrentEntity}
           onEntitiesRefresh={loadEntities}
+          onInsertCharacterSheet={handleInsertCharacterSheet}
         />
       </div>
 
