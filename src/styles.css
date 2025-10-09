@@ -902,3 +902,84 @@ body.dark-mode .color-option-tiny.selected {
   border-color: #e0e0e0;
   box-shadow: 0 0 0 1px #2d2d2d, 0 0 0 3px #e0e0e0;
 }
+
+/* Status Bar Styles */
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 20px;
+  background-color: #f5f5f5;
+  border-top: 1px solid #ddd;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.status-bar-section {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.word-count {
+  font-weight: 500;
+  color: #666;
+}
+
+.nav-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-label {
+  color: #666;
+  font-size: 12px;
+  margin-right: 4px;
+}
+
+.nav-button {
+  padding: 4px 10px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  transition: all 0.2s;
+}
+
+.nav-button:hover {
+  background-color: #e9ecef;
+  border-color: #ccc;
+}
+
+.nav-button:active {
+  background-color: #dee2e6;
+}
+
+/* Dark Mode for Status Bar */
+body.dark-mode .status-bar {
+  background-color: #2d2d2d;
+  border-top-color: #3d3d3d;
+}
+
+body.dark-mode .word-count,
+body.dark-mode .nav-label {
+  color: #999;
+}
+
+body.dark-mode .nav-button {
+  background-color: #3d3d3d;
+  color: #e0e0e0;
+  border-color: #4d4d4d;
+}
+
+body.dark-mode .nav-button:hover {
+  background-color: #4d4d4d;
+  border-color: #5d5d5d;
+}
+
+body.dark-mode .nav-button:active {
+  background-color: #555;
+}

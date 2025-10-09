@@ -12,7 +12,7 @@ import { invoke } from '@tauri-apps/api/tauri'
 import EditorToolbar from './EditorToolbar'
 import 'prosemirror-view/style/prosemirror.css'
 
-const Editor = forwardRef(({ onCursorMove, onEditorReady, onInsertStateChange }, ref) => {
+const Editor = forwardRef(({ onCursorMove, onWordCountChange, onEditorReady, onInsertStateChange }, ref) => {
   const editorRef = useRef(null)
   const viewRef = useRef(null)
   const [editorView, setEditorView] = useState(null)
@@ -139,6 +139,96 @@ const Editor = forwardRef(({ onCursorMove, onEditorReady, onInsertStateChange },
         const tr = view.state.tr.replaceWith(0, view.state.doc.content.size, newDoc.content)
         view.dispatch(tr)
       }
+    },
+    navigateToPreviousChapter: () => {
+      if (!viewRef.current) return
+      const view = viewRef.current
+      const { doc, selection } = view.state
+      const currentPos = selection.from
+      let foundPos = null
+
+      // Find previous heading before current position
+      doc.descendants((node, pos) => {
+        if (node.type.name === 'heading' && pos < currentPos) {
+          foundPos = pos
+        }
+      })
+
+      if (foundPos !== null) {
+        const tr = view.state.tr.setSelection(
+          view.state.selection.constructor.near(view.state.doc.resolve(foundPos))
+        ).scrollIntoView()
+        view.dispatch(tr)
+        view.focus()
+      }
+    },
+    navigateToNextChapter: () => {
+      if (!viewRef.current) return
+      const view = viewRef.current
+      const { doc, selection } = view.state
+      const currentPos = selection.from
+      let foundPos = null
+
+      // Find next heading after current position
+      doc.descendants((node, pos) => {
+        if (foundPos === null && node.type.name === 'heading' && pos > currentPos) {
+          foundPos = pos
+          return false // Stop searching
+        }
+      })
+
+      if (foundPos !== null) {
+        const tr = view.state.tr.setSelection(
+          view.state.selection.constructor.near(view.state.doc.resolve(foundPos))
+        ).scrollIntoView()
+        view.dispatch(tr)
+        view.focus()
+      }
+    },
+    navigateToPreviousMarker: () => {
+      if (!viewRef.current) return
+      const view = viewRef.current
+      const { doc, selection } = view.state
+      const currentPos = selection.from
+      let foundPos = null
+
+      // Find previous marker before current position
+      doc.descendants((node, pos) => {
+        if (node.type.name === 'marker' && pos < currentPos) {
+          foundPos = pos
+        }
+      })
+
+      if (foundPos !== null) {
+        const tr = view.state.tr.setSelection(
+          view.state.selection.constructor.near(view.state.doc.resolve(foundPos))
+        ).scrollIntoView()
+        view.dispatch(tr)
+        view.focus()
+      }
+    },
+    navigateToNextMarker: () => {
+      if (!viewRef.current) return
+      const view = viewRef.current
+      const { doc, selection } = view.state
+      const currentPos = selection.from
+      let foundPos = null
+
+      // Find next marker after current position
+      doc.descendants((node, pos) => {
+        if (foundPos === null && node.type.name === 'marker' && pos > currentPos) {
+          foundPos = pos
+          return false // Stop searching
+        }
+      })
+
+      if (foundPos !== null) {
+        const tr = view.state.tr.setSelection(
+          view.state.selection.constructor.near(view.state.doc.resolve(foundPos))
+        ).scrollIntoView()
+        view.dispatch(tr)
+        view.focus()
+      }
     }
   }))
 
@@ -239,10 +329,17 @@ const Editor = forwardRef(({ onCursorMove, onEditorReady, onInsertStateChange },
       dispatchTransaction(transaction) {
         const newState = view.state.apply(transaction)
         view.updateState(newState)
-        
+
         // Notify parent of cursor position changes
         if (transaction.selection && onCursorMove) {
           onCursorMove(transaction.selection.from)
+        }
+
+        // Update word count if document changed
+        if (transaction.docChanged && onWordCountChange) {
+          const text = newState.doc.textContent
+          const words = text.trim().split(/\s+/).filter(w => w.length > 0)
+          onWordCountChange(words.length)
         }
       },
     })
@@ -252,6 +349,13 @@ const Editor = forwardRef(({ onCursorMove, onEditorReady, onInsertStateChange },
 
     // Focus the editor on mount
     view.focus()
+
+    // Initialize word count
+    if (onWordCountChange) {
+      const text = view.state.doc.textContent
+      const words = text.trim().split(/\s+/).filter(w => w.length > 0)
+      onWordCountChange(words.length)
+    }
 
     console.log('ProseMirror editor initialized')
 

@@ -4,11 +4,13 @@ import { open, save } from '@tauri-apps/api/dialog'
 import Editor from './components/Editor'
 import Sidebar from './components/Sidebar'
 import MarkerDialog from './components/MarkerDialog'
+import StatusBar from './components/StatusBar'
 
 function App() {
   const [currentEntity, setCurrentEntity] = useState(null)
   const [entities, setEntities] = useState([])
   const [cursorPosition, setCursorPosition] = useState(0)
+  const [wordCount, setWordCount] = useState(0)
   const [darkMode, setDarkMode] = useState(false)
   const [isMarkerDialogOpen, setIsMarkerDialogOpen] = useState(false)
   const [editingMarker, setEditingMarker] = useState(null)
@@ -63,6 +65,10 @@ function App() {
   // Use useCallback to prevent function from being recreated on every render
   const handleCursorMove = useCallback((position) => {
     setCursorPosition(position)
+  }, [])
+
+  const handleWordCountChange = useCallback((count) => {
+    setWordCount(count)
   }, [])
 
   const handleMarkerInserted = useCallback(async (marker, isEditing, isDeleted) => {
@@ -181,7 +187,7 @@ function App() {
       if (filePath) {
         const document = await invoke('load_document', { filePath })
 
-        // Set content in editor
+        // Set content in editor (markers are already embedded in the document)
         if (editorRef.current) {
           editorRef.current.setContent(document.content)
         }
@@ -189,9 +195,8 @@ function App() {
         // Save the current file path
         setCurrentFilePath(filePath)
 
-        // Reload entities and markers
+        // Reload entities only (markers are already in the document)
         await loadEntities()
-        await loadMarkers()
 
         alert('Document loaded successfully!')
       }
@@ -229,6 +234,31 @@ function App() {
     }
   }, [])
 
+  // Navigation handlers
+  const handlePreviousChapter = useCallback(() => {
+    if (editorRef.current) {
+      editorRef.current.navigateToPreviousChapter()
+    }
+  }, [])
+
+  const handleNextChapter = useCallback(() => {
+    if (editorRef.current) {
+      editorRef.current.navigateToNextChapter()
+    }
+  }, [])
+
+  const handlePreviousMarker = useCallback(() => {
+    if (editorRef.current) {
+      editorRef.current.navigateToPreviousMarker()
+    }
+  }, [])
+
+  const handleNextMarker = useCallback(() => {
+    if (editorRef.current) {
+      editorRef.current.navigateToNextMarker()
+    }
+  }, [])
+
   return (
     <div className="app">
       <div className="toolbar">
@@ -252,10 +282,11 @@ function App() {
         <Editor
           ref={editorRef}
           onCursorMove={handleCursorMove}
+          onWordCountChange={handleWordCountChange}
           onEditorReady={handleEditorReady}
           onInsertStateChange={() => setIsMarkerDialogOpen(true)}
         />
-        
+
         <Sidebar
           entities={entities}
           currentEntity={currentEntity}
@@ -264,6 +295,14 @@ function App() {
           onEntitiesRefresh={loadEntities}
         />
       </div>
+
+      <StatusBar
+        wordCount={wordCount}
+        onPreviousChapter={handlePreviousChapter}
+        onNextChapter={handleNextChapter}
+        onPreviousMarker={handlePreviousMarker}
+        onNextMarker={handleNextMarker}
+      />
 
       <MarkerDialog
         isOpen={isMarkerDialogOpen}
