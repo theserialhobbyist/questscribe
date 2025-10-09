@@ -11,7 +11,8 @@
       "Bash(netstat:*)",
       "Bash(findstr:*)",
       "Bash(git reset:*)",
-      "Bash(cargo:*)"
+      "Bash(cargo:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

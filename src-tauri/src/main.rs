@@ -3,12 +3,70 @@
 
 mod state;
 
-use state::{Entity, Marker, FieldChange, MarkerVisual, Document, AppState};
-use std::collections::HashMap;
+use state::{Entity, Marker, FieldChange, MarkerVisual, Document, AppState, ChangeType};
 use std::fs;
 use std::path::PathBuf;
 use std::io::Cursor;
 use docx_rs::*;
+
+// Helper function to set a nested value in a JSON object using a path like "stats.HP"
+fn set_nested_value(
+    state: &mut serde_json::Map<String, serde_json::Value>,
+    path: &str,
+    value: serde_json::Value,
+) {
+    let parts: Vec<&str> = path.split('.').collect();
+
+    if parts.len() == 1 {
+        // Simple field, no nesting
+        state.insert(path.to_string(), value);
+        return;
+    }
+
+    // Build the path recursively
+    fn insert_at_path(
+        obj: &mut serde_json::Map<String, serde_json::Value>,
+        parts: &[&str],
+        value: serde_json::Value,
+    ) {
+        if parts.len() == 1 {
+            obj.insert(parts[0].to_string(), value);
+        } else {
+            let entry = obj
+                .entry(parts[0].to_string())
+                .or_insert_with(|| serde_json::json!({}));
+
+            if let Some(nested_obj) = entry.as_object_mut() {
+                insert_at_path(nested_obj, &parts[1..], value);
+            }
+        }
+    }
+
+    insert_at_path(state, &parts, value);
+}
+
+// Helper function to get a nested value from a JSON object using a path
+fn get_nested_value<'a>(
+    state: &'a serde_json::Map<String, serde_json::Value>,
+    path: &str,
+) -> Option<&'a serde_json::Value> {
+    let parts: Vec<&str> = path.split('.').collect();
+
+    if parts.len() == 1 {
+        return state.get(path);
+    }
+
+    let mut current = state;
+    for (i, part) in parts.iter().enumerate() {
+        if i == parts.len() - 1 {
+            return current.get(*part);
+        } else {
+            current = current.get(*part)?.as_object()?;
+        }
+    }
+
+    None
+}
 
 // Tauri command to get all entities
 #[tauri::command]
@@ -23,7 +81,7 @@ fn get_entity_state(
     entity_id: String,
     position: usize,
     state: tauri::State<AppState>,
-) -> Result<HashMap<String, serde_json::Value>, String> {
+) -> Result<serde_json::Value, String> {
     let entities = state.entities.lock().unwrap();
     let markers = state.markers.lock().unwrap();
 
@@ -41,44 +99,47 @@ fn get_entity_state(
     // Sort by position
     relevant_markers.sort_by_key(|m| m.position);
 
-    // Start with empty state
-    let mut current_state: HashMap<String, serde_json::Value> = HashMap::new();
+    // Start with empty state (use Map for nested structure support)
+    let mut current_state = serde_json::Map::new();
 
     // Apply each marker's changes
     for marker in relevant_markers {
         for change in &marker.changes {
-            let value = if change.change_type == "absolute" {
-                // Try to parse as number, otherwise treat as string
-                if let Ok(num) = change.value.parse::<f64>() {
-                    serde_json::json!(num)
-                } else if change.value == "true" || change.value == "false" {
-                    serde_json::json!(change.value.parse::<bool>().unwrap())
-                } else {
-                    serde_json::json!(change.value)
+            let value = match &change.change_type {
+                ChangeType::Absolute => {
+                    // Try to parse as number, otherwise treat as string
+                    if let Ok(num) = change.value.parse::<f64>() {
+                        serde_json::json!(num)
+                    } else if change.value == "true" || change.value == "false" {
+                        serde_json::json!(change.value.parse::<bool>().unwrap())
+                    } else {
+                        serde_json::json!(change.value)
+                    }
                 }
-            } else {
-                // Relative change - add to existing value
-                if let Ok(delta) = change.value.parse::<f64>() {
-                    let current_val = current_state
-                        .get(&change.field_name)
-                        .and_then(|v| v.as_f64())
-                        .unwrap_or(0.0);
-                    serde_json::json!(current_val + delta)
-                } else {
-                    serde_json::json!(change.value)
+                ChangeType::Relative => {
+                    // Relative change - add to existing value
+                    if let Ok(delta) = change.value.parse::<f64>() {
+                        let current_val = get_nested_value(&current_state, &change.field_name)
+                            .and_then(|v| v.as_f64())
+                            .unwrap_or(0.0);
+                        serde_json::json!(current_val + delta)
+                    } else {
+                        serde_json::json!(change.value)
+                    }
                 }
             };
-            current_state.insert(change.field_name.clone(), value);
+            set_nested_value(&mut current_state, &change.field_name, value);
         }
     }
 
-    Ok(current_state)
+    Ok(serde_json::Value::Object(current_state))
 }
 
 // Tauri command to create a new entity
 #[tauri::command]
 fn create_entity(
     name: String,
+    color: Option<String>,
     state: tauri::State<AppState>,
 ) -> Result<Entity, String> {
     let mut entities = state.entities.lock().unwrap();
@@ -86,11 +147,60 @@ fn create_entity(
     let entity = Entity {
         id: uuid::Uuid::new_v4().to_string(),
         name,
+        fields: Vec::new(),
+        color: color.unwrap_or_else(|| "#FFD700".to_string()),
     };
 
     entities.insert(entity.id.clone(), entity.clone());
 
     Ok(entity)
+}
+
+// Tauri command to update an entity's name and/or color
+#[tauri::command]
+fn update_entity(
+    entity_id: String,
+    name: Option<String>,
+    color: Option<String>,
+    state: tauri::State<AppState>,
+) -> Result<Entity, String> {
+    let mut entities = state.entities.lock().unwrap();
+
+    let entity = entities
+        .get_mut(&entity_id)
+        .ok_or("Entity not found")?;
+
+    if let Some(n) = name {
+        entity.name = n;
+    }
+    if let Some(c) = color {
+        entity.color = c;
+    }
+
+    Ok(entity.clone())
+}
+
+// Tauri command to delete an entity
+#[tauri::command]
+fn delete_entity(
+    entity_id: String,
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    let mut entities = state.entities.lock().unwrap();
+    let mut markers = state.markers.lock().unwrap();
+
+    // Check if entity exists
+    if !entities.contains_key(&entity_id) {
+        return Err("Entity not found".to_string());
+    }
+
+    // Delete all markers associated with this entity
+    markers.retain(|_, marker| marker.entity_id != entity_id);
+
+    // Delete the entity
+    entities.remove(&entity_id);
+
+    Ok(())
 }
 
 // Tauri command to insert a marker
@@ -100,19 +210,38 @@ fn insert_marker(
     entity_id: String,
     changes: Vec<FieldChange>,
     visual: MarkerVisual,
+    description: Option<String>,
     state: tauri::State<AppState>,
 ) -> Result<Marker, String> {
     let mut markers = state.markers.lock().unwrap();
+    let mut entities = state.entities.lock().unwrap();
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
 
     let marker = Marker {
         id: uuid::Uuid::new_v4().to_string(),
         position,
-        entity_id,
-        changes,
+        entity_id: entity_id.clone(),
+        changes: changes.clone(),
         visual,
+        description: description.unwrap_or_default(),
+        created_at: now,
+        modified_at: now,
     };
 
     markers.insert(marker.id.clone(), marker.clone());
+
+    // Update entity's field list with any new fields from this marker
+    if let Some(entity) = entities.get_mut(&entity_id) {
+        for change in &changes {
+            if !entity.fields.contains(&change.field_name) {
+                entity.fields.push(change.field_name.clone());
+            }
+        }
+    }
 
     Ok(marker)
 }
@@ -136,6 +265,91 @@ fn get_markers_at_position(
         .filter(|m| m.position == position)
         .cloned()
         .collect()
+}
+
+// Tauri command to update an existing marker
+#[tauri::command]
+fn update_marker(
+    marker_id: String,
+    position: Option<usize>,
+    entity_id: Option<String>,
+    changes: Option<Vec<FieldChange>>,
+    visual: Option<MarkerVisual>,
+    description: Option<String>,
+    state: tauri::State<AppState>,
+) -> Result<Marker, String> {
+    let mut markers = state.markers.lock().unwrap();
+    let mut entities = state.entities.lock().unwrap();
+
+    let marker = markers
+        .get_mut(&marker_id)
+        .ok_or("Marker not found")?;
+
+    // Update fields if provided
+    if let Some(pos) = position {
+        marker.position = pos;
+    }
+    if let Some(ent_id) = entity_id {
+        marker.entity_id = ent_id;
+    }
+    if let Some(chgs) = &changes {
+        marker.changes = chgs.clone();
+
+        // Update entity's field list with any new fields
+        if let Some(entity) = entities.get_mut(&marker.entity_id) {
+            for change in chgs {
+                if !entity.fields.contains(&change.field_name) {
+                    entity.fields.push(change.field_name.clone());
+                }
+            }
+        }
+    }
+    if let Some(vis) = visual {
+        marker.visual = vis;
+    }
+    if let Some(desc) = description {
+        marker.description = desc;
+    }
+
+    // Update modified timestamp
+    marker.modified_at = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+
+    Ok(marker.clone())
+}
+
+// Tauri command to delete a marker
+#[tauri::command]
+fn delete_marker(
+    marker_id: String,
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    let mut markers = state.markers.lock().unwrap();
+
+    markers
+        .remove(&marker_id)
+        .ok_or("Marker not found")?;
+
+    Ok(())
+}
+
+// Tauri command to update marker positions (for text changes)
+#[tauri::command]
+fn update_marker_positions(
+    position_updates: Vec<(String, usize)>, // (marker_id, new_position)
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    let mut markers = state.markers.lock().unwrap();
+
+    for (marker_id, new_position) in position_updates {
+        if let Some(marker) = markers.get_mut(&marker_id) {
+            marker.position = new_position;
+        }
+    }
+
+    Ok(())
 }
 
 // Tauri command to save document
@@ -544,8 +758,20 @@ fn main() {
     let reference_entity = Entity {
         id: "reference".to_string(),
         name: "Example Hero (Reference)".to_string(),
+        fields: vec![
+            "Level".to_string(),
+            "stats.HP".to_string(),
+            "stats.MP".to_string(),
+            "stats.Strength".to_string(),
+            "stats.Intelligence".to_string(),
+            "spells.fire.Firebolt".to_string(),
+            "spells.fire.Fireball".to_string(),
+            "spells.ice.Ice Storm".to_string(),
+            "inventory.Potions".to_string(),
+        ],
+        color: "#FFD700".to_string(), // Gold
     };
-    
+
     app_state.entities.lock().unwrap().insert(
         reference_entity.id.clone(),
         reference_entity,
@@ -557,7 +783,12 @@ fn main() {
             get_all_entities,
             get_entity_state,
             create_entity,
+            update_entity,
+            delete_entity,
             insert_marker,
+            update_marker,
+            delete_marker,
+            update_marker_positions,
             get_all_markers,
             get_markers_at_position,
             save_document,

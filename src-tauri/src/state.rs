@@ -6,6 +6,14 @@ use std::sync::Mutex;
 pub struct Entity {
     pub id: String,
     pub name: String,
+    #[serde(default)]
+    pub fields: Vec<String>, // List of field paths (e.g., "stats.HP", "spells.fire.Firebolt")
+    #[serde(default = "default_entity_color")]
+    pub color: String, // Hex color for this entity's markers
+}
+
+fn default_entity_color() -> String {
+    "#FFD700".to_string() // Gold as default
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -15,13 +23,33 @@ pub struct Marker {
     pub entity_id: String,
     pub changes: Vec<FieldChange>,
     pub visual: MarkerVisual,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default = "default_timestamp")]
+    pub created_at: i64,
+    #[serde(default = "default_timestamp")]
+    pub modified_at: i64,
+}
+
+fn default_timestamp() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FieldChange {
     pub field_name: String,
-    pub change_type: String, // "absolute" or "relative"
+    pub change_type: ChangeType,
     pub value: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ChangeType {
+    Absolute,
+    Relative,
 }
 
 

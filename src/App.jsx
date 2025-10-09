@@ -11,6 +11,7 @@ function App() {
   const [cursorPosition, setCursorPosition] = useState(0)
   const [darkMode, setDarkMode] = useState(false)
   const [isMarkerDialogOpen, setIsMarkerDialogOpen] = useState(false)
+  const [editingMarker, setEditingMarker] = useState(null)
   const [currentFilePath, setCurrentFilePath] = useState(null)
   const editorRef = useRef(null)
 
@@ -64,14 +65,42 @@ function App() {
     setCursorPosition(position)
   }, [])
 
-  const handleMarkerInserted = useCallback((marker) => {
-    // Add marker to editor
-    if (editorRef.current) {
-      editorRef.current.insertMarker(marker)
+  const handleMarkerInserted = useCallback(async (marker, isEditing, isDeleted) => {
+    if (isDeleted) {
+      // Remove marker from editor
+      if (editorRef.current) {
+        editorRef.current.removeMarker(marker.id)
+      }
+    } else if (isEditing) {
+      // Update marker in editor
+      if (editorRef.current) {
+        editorRef.current.updateMarker(marker)
+      }
+    } else {
+      // Add new marker to editor
+      if (editorRef.current) {
+        editorRef.current.insertMarker(marker)
+      }
     }
     // Force sidebar to refresh by updating cursor position
     setCursorPosition(cursorPosition => cursorPosition)
+
+    // Reload entities to get updated field lists
+    await loadEntities()
+  }, [loadEntities])
+
+  const handleEditMarker = useCallback((marker) => {
+    setEditingMarker(marker)
+    setIsMarkerDialogOpen(true)
   }, [])
+
+  // Set up global edit marker function for the editor
+  useEffect(() => {
+    window.editMarker = handleEditMarker
+    return () => {
+      delete window.editMarker
+    }
+  }, [handleEditMarker])
 
   const handleNewDocument = useCallback(async () => {
     if (confirm('Create new document? Any unsaved changes will be lost.')) {
@@ -238,10 +267,14 @@ function App() {
 
       <MarkerDialog
         isOpen={isMarkerDialogOpen}
-        onClose={() => setIsMarkerDialogOpen(false)}
+        onClose={() => {
+          setIsMarkerDialogOpen(false)
+          setEditingMarker(null)
+        }}
         entities={entities}
         cursorPosition={cursorPosition}
         onMarkerInserted={handleMarkerInserted}
+        editingMarker={editingMarker}
       />
     </div>
   )

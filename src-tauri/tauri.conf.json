@@ -19,7 +19,8 @@
       "dialog": {
         "all": false,
         "open": true,
-        "save": true
+        "save": true,
+        "ask": true
       },
       "fs": {
         "all": false,

@@ -99,6 +99,22 @@ body.dark-mode .sidebar-header select {
   border-color: #4d4d4d;
 }
 
+body.dark-mode .btn-icon {
+  background-color: #3d3d3d;
+  color: #e0e0e0;
+  border-color: #4d4d4d;
+}
+
+body.dark-mode .btn-icon:hover {
+  background-color: #4d4d4d;
+}
+
+body.dark-mode .edit-entity-form input {
+  background-color: #3d3d3d;
+  color: #e0e0e0;
+  border-color: #4d4d4d;
+}
+
 body.dark-mode .sidebar-position {
   border-bottom-color: #3d3d3d;
   color: #999;
@@ -141,6 +157,10 @@ body.dark-mode .btn-primary {
 
 body.dark-mode .btn-secondary {
   background-color: #6c757d;
+}
+
+body.dark-mode .btn-danger {
+  background-color: #dc3545;
 }
 
 .app {
@@ -301,6 +321,40 @@ body.dark-mode .btn-secondary {
   font-size: 14px;
 }
 
+.entity-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.btn-icon {
+  padding: 4px 8px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.btn-icon:hover {
+  background-color: #f0f0f0;
+}
+
+.edit-entity-form {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.edit-entity-form input {
+  flex: 1;
+  padding: 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
 .sidebar-position {
   padding: 10px 15px;
   font-size: 12px;
@@ -423,6 +477,27 @@ body.dark-mode .btn-secondary {
 
 .btn-secondary:hover {
   background-color: #5a6268;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+}
+
+/* Marker Node Styles */
+.marker-node {
+  display: inline-block;
+  user-select: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.marker-node:hover {
+  opacity: 0.8;
 }
 
 /* Modal Dialog Styles */
@@ -751,4 +826,79 @@ body.dark-mode .custom-color-input {
   background-color: #3d3d3d;
   color: #e0e0e0;
   border-color: #4d4d4d;
+}
+
+/* Character Color Selector Styles */
+.color-selector {
+  margin-bottom: 10px;
+}
+
+.color-selector label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: #666;
+}
+
+.color-grid-small {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+}
+
+.color-option-small {
+  width: 100%;
+  height: 24px;
+  border: 2px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+  padding: 0;
+}
+
+.color-option-small:hover {
+  transform: scale(1.1);
+}
+
+.color-option-small.selected {
+  border-color: #333;
+  box-shadow: 0 0 0 1px white, 0 0 0 3px #333;
+}
+
+.color-selector-inline {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  margin: 4px 0;
+}
+
+.color-option-tiny {
+  width: 20px;
+  height: 20px;
+  border: 2px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+  padding: 0;
+}
+
+.color-option-tiny:hover {
+  transform: scale(1.15);
+}
+
+.color-option-tiny.selected {
+  border-color: #333;
+  box-shadow: 0 0 0 1px white, 0 0 0 3px #333;
+}
+
+/* Dark Mode for Character Color Selectors */
+body.dark-mode .color-selector label {
+  color: #999;
+}
+
+body.dark-mode .color-option-small.selected,
+body.dark-mode .color-option-tiny.selected {
+  border-color: #e0e0e0;
+  box-shadow: 0 0 0 1px #2d2d2d, 0 0 0 3px #e0e0e0;
 }
