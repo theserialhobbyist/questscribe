@@ -10,6 +10,14 @@ pub struct Entity {
     pub fields: Vec<String>, // List of field paths (e.g., "stats.HP", "spells.fire.Firebolt")
     #[serde(default = "default_entity_color")]
     pub color: String, // Hex color for this entity's markers
+    #[serde(default)]
+    pub field_metadata: HashMap<String, FieldMetadata>, // Track creation/modification times
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FieldMetadata {
+    pub created_at: i64,
+    pub last_modified: i64,
 }
 
 fn default_entity_color() -> String {
@@ -50,6 +58,7 @@ pub struct FieldChange {
 pub enum ChangeType {
     Absolute,
     Relative,
+    Remove, // Removes the field from the state
 }
 
 

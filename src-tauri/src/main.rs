@@ -68,6 +68,36 @@ fn get_nested_value<'a>(
     None
 }
 
+// Helper function to remove a nested value from a JSON object using a path
+fn remove_nested_value(
+    state: &mut serde_json::Map<String, serde_json::Value>,
+    path: &str,
+) {
+    let parts: Vec<&str> = path.split('.').collect();
+
+    if parts.len() == 1 {
+        // Simple field, remove directly
+        state.remove(path);
+        return;
+    }
+
+    // Navigate to parent and remove the field
+    fn remove_at_path(
+        obj: &mut serde_json::Map<String, serde_json::Value>,
+        parts: &[&str],
+    ) {
+        if parts.len() == 1 {
+            obj.remove(parts[0]);
+        } else if let Some(nested) = obj.get_mut(parts[0]) {
+            if let Some(nested_obj) = nested.as_object_mut() {
+                remove_at_path(nested_obj, &parts[1..]);
+            }
+        }
+    }
+
+    remove_at_path(state, &parts);
+}
+
 // Tauri command to get all entities
 #[tauri::command]
 fn get_all_entities(state: tauri::State<AppState>) -> Vec<Entity> {
@@ -105,30 +135,35 @@ fn get_entity_state(
     // Apply each marker's changes
     for marker in relevant_markers {
         for change in &marker.changes {
-            let value = match &change.change_type {
+            match &change.change_type {
+                ChangeType::Remove => {
+                    // Remove the field from the state
+                    remove_nested_value(&mut current_state, &change.field_name);
+                }
                 ChangeType::Absolute => {
                     // Try to parse as number, otherwise treat as string
-                    if let Ok(num) = change.value.parse::<f64>() {
+                    let value = if let Ok(num) = change.value.parse::<f64>() {
                         serde_json::json!(num)
                     } else if change.value == "true" || change.value == "false" {
                         serde_json::json!(change.value.parse::<bool>().unwrap())
                     } else {
                         serde_json::json!(change.value)
-                    }
+                    };
+                    set_nested_value(&mut current_state, &change.field_name, value);
                 }
                 ChangeType::Relative => {
                     // Relative change - add to existing value
-                    if let Ok(delta) = change.value.parse::<f64>() {
+                    let value = if let Ok(delta) = change.value.parse::<f64>() {
                         let current_val = get_nested_value(&current_state, &change.field_name)
                             .and_then(|v| v.as_f64())
                             .unwrap_or(0.0);
                         serde_json::json!(current_val + delta)
                     } else {
                         serde_json::json!(change.value)
-                    }
+                    };
+                    set_nested_value(&mut current_state, &change.field_name, value);
                 }
-            };
-            set_nested_value(&mut current_state, &change.field_name, value);
+            }
         }
     }
 
@@ -149,6 +184,7 @@ fn create_entity(
         name,
         fields: Vec::new(),
         color: color.unwrap_or_else(|| "#FFD700".to_string()),
+        field_metadata: std::collections::HashMap::new(),
     };
 
     entities.insert(entity.id.clone(), entity.clone());
@@ -203,6 +239,66 @@ fn delete_entity(
     Ok(())
 }
 
+// Tauri command to duplicate an entity
+// Creates a copy with a new ID and name, preserving fields and metadata
+#[tauri::command]
+fn duplicate_entity(
+    entity_id: String,
+    new_name: String,
+    state: tauri::State<AppState>,
+) -> Result<Entity, String> {
+    let mut entities = state.entities.lock().unwrap();
+
+    // Get the source entity
+    let source_entity = entities
+        .get(&entity_id)
+        .ok_or("Entity not found")?
+        .clone();
+
+    // Create a new entity with copied fields and metadata
+    let new_entity = Entity {
+        id: uuid::Uuid::new_v4().to_string(),
+        name: new_name,
+        fields: source_entity.fields.clone(),
+        color: source_entity.color.clone(),
+        field_metadata: source_entity.field_metadata.clone(),
+    };
+
+    entities.insert(new_entity.id.clone(), new_entity.clone());
+
+    Ok(new_entity)
+}
+
+// Tauri command to completely delete a field from an entity and all its markers
+// This removes the field from ALL markers (including remove markers) and the entity's field list
+#[tauri::command]
+fn delete_field_completely(
+    entity_id: String,
+    field_name: String,
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    let mut entities = state.entities.lock().unwrap();
+    let mut markers = state.markers.lock().unwrap();
+
+    // Check if entity exists
+    let entity = entities
+        .get_mut(&entity_id)
+        .ok_or("Entity not found")?;
+
+    // Remove field from entity's fields list
+    entity.fields.retain(|f| f != &field_name);
+
+    // Remove ALL changes for this field from all markers belonging to this entity
+    // This includes absolute, relative, AND remove markers
+    for marker in markers.values_mut() {
+        if marker.entity_id == entity_id {
+            marker.changes.retain(|change| change.field_name != field_name);
+        }
+    }
+
+    Ok(())
+}
+
 // Tauri command to insert a marker
 #[tauri::command]
 fn insert_marker(
@@ -234,12 +330,21 @@ fn insert_marker(
 
     markers.insert(marker.id.clone(), marker.clone());
 
-    // Update entity's field list with any new fields from this marker
+    // Update entity's field list and metadata with any new fields from this marker
     if let Some(entity) = entities.get_mut(&entity_id) {
         for change in &changes {
+            // Add to fields list if not present
             if !entity.fields.contains(&change.field_name) {
                 entity.fields.push(change.field_name.clone());
             }
+
+            // Update metadata - create if new, or update last_modified if existing
+            entity.field_metadata.entry(change.field_name.clone())
+                .and_modify(|meta| meta.last_modified = now)
+                .or_insert(state::FieldMetadata {
+                    created_at: now,
+                    last_modified: now,
+                });
         }
     }
 
@@ -292,15 +397,29 @@ fn update_marker(
     if let Some(ent_id) = entity_id {
         marker.entity_id = ent_id;
     }
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+
     if let Some(chgs) = &changes {
         marker.changes = chgs.clone();
 
-        // Update entity's field list with any new fields
+        // Update entity's field list and metadata with any new fields
         if let Some(entity) = entities.get_mut(&marker.entity_id) {
             for change in chgs {
+                // Add to fields list if not present
                 if !entity.fields.contains(&change.field_name) {
                     entity.fields.push(change.field_name.clone());
                 }
+
+                // Update metadata
+                entity.field_metadata.entry(change.field_name.clone())
+                    .and_modify(|meta| meta.last_modified = now)
+                    .or_insert(state::FieldMetadata {
+                        created_at: now,
+                        last_modified: now,
+                    });
             }
         }
     }
@@ -755,21 +874,37 @@ fn main() {
     let app_state = AppState::new();
     
     // Add a reference character for demonstration
+    let mut field_metadata = std::collections::HashMap::new();
+    let base_time = 1000000000i64; // Some base timestamp for reference entity
+    let fields = vec![
+        "Level".to_string(),
+        "stats.HP".to_string(),
+        "stats.MP".to_string(),
+        "stats.Strength".to_string(),
+        "stats.Intelligence".to_string(),
+        "spells.fire.Firebolt".to_string(),
+        "spells.fire.Fireball".to_string(),
+        "spells.ice.Ice Storm".to_string(),
+        "inventory.Potions".to_string(),
+    ];
+
+    // Create metadata for each field with incremental creation times
+    for (i, field) in fields.iter().enumerate() {
+        field_metadata.insert(
+            field.clone(),
+            state::FieldMetadata {
+                created_at: base_time + (i as i64),
+                last_modified: base_time + (i as i64),
+            },
+        );
+    }
+
     let reference_entity = Entity {
         id: "reference".to_string(),
         name: "Example Hero (Reference)".to_string(),
-        fields: vec![
-            "Level".to_string(),
-            "stats.HP".to_string(),
-            "stats.MP".to_string(),
-            "stats.Strength".to_string(),
-            "stats.Intelligence".to_string(),
-            "spells.fire.Firebolt".to_string(),
-            "spells.fire.Fireball".to_string(),
-            "spells.ice.Ice Storm".to_string(),
-            "inventory.Potions".to_string(),
-        ],
+        fields,
         color: "#FFD700".to_string(), // Gold
+        field_metadata,
     };
 
     app_state.entities.lock().unwrap().insert(
@@ -785,6 +920,8 @@ fn main() {
             create_entity,
             update_entity,
             delete_entity,
+            duplicate_entity,
+            delete_field_completely,
             insert_marker,
             update_marker,
             delete_marker,

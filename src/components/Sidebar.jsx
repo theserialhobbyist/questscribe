@@ -11,6 +11,7 @@ function Sidebar({ entities, currentEntity, cursorPosition, onEntityChange, onEn
   const [editingEntity, setEditingEntity] = useState(null)
   const [editName, setEditName] = useState('')
   const [editColor, setEditColor] = useState('#FFD700')
+  const [sortMode, setSortMode] = useState('created') // 'created', 'modified', 'alphabetical'
 
   const commonColors = [
     '#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
@@ -140,16 +141,101 @@ function Sidebar({ entities, currentEntity, cursorPosition, onEntityChange, onEn
     }
   }
 
+  const handleDuplicateEntity = async (entityId, entityName) => {
+    const newName = prompt(`Enter name for duplicated character:`, `${entityName} (Copy)`)
+
+    if (!newName || !newName.trim()) {
+      return
+    }
+
+    try {
+      const newEntity = await invoke('duplicate_entity', {
+        entityId,
+        newName: newName.trim()
+      })
+
+      // Refresh the entities list
+      if (onEntitiesRefresh) {
+        await onEntitiesRefresh()
+      }
+
+      // Select the newly duplicated character
+      onEntityChange(newEntity.id)
+    } catch (error) {
+      console.error('Failed to duplicate character:', error)
+      alert('Failed to duplicate character: ' + error)
+    }
+  }
+
+  const handleDeleteField = async (fieldName) => {
+    const confirmed = await ask(
+      `Delete field "${fieldName}" completely?\n\nThis will remove it from ALL markers (past, present, and future). This action cannot be undone.`,
+      {
+        title: 'Delete Field',
+        type: 'warning'
+      }
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    try {
+      await invoke('delete_field_completely', {
+        entityId: currentEntity,
+        fieldName
+      })
+
+      // Refresh the entities list
+      if (onEntitiesRefresh) {
+        await onEntitiesRefresh()
+      }
+
+      // Refresh the state display
+      const state = await invoke('get_entity_state', {
+        entityId: currentEntity,
+        position: cursorPosition,
+      })
+      setEntityState(state)
+    } catch (error) {
+      console.error('Failed to delete field:', error)
+      alert('Failed to delete field: ' + error)
+    }
+  }
+
   const renderStateTree = (node, path = []) => {
     if (!node) return null
 
-    return Object.entries(node).map(([key, value]) => {
+    const currentEntityData = entities.find(e => e.id === currentEntity)
+    const metadata = currentEntityData?.field_metadata || {}
+
+    // Sort entries based on selected sort mode
+    const sortedEntries = Object.entries(node).sort(([keyA], [keyB]) => {
+      const fullPathA = [...path, keyA].join('.')
+      const fullPathB = [...path, keyB].join('.')
+
+      if (sortMode === 'created') {
+        const timeA = metadata[fullPathA]?.created_at || 0
+        const timeB = metadata[fullPathB]?.created_at || 0
+        return timeA - timeB // Oldest first
+      } else if (sortMode === 'modified') {
+        const timeA = metadata[fullPathA]?.last_modified || 0
+        const timeB = metadata[fullPathB]?.last_modified || 0
+        return timeB - timeA // Most recent first
+      } else {
+        // alphabetical
+        return keyA.localeCompare(keyB)
+      }
+    })
+
+    return sortedEntries.map(([key, value]) => {
       const currentPath = [...path, key]
-      
+      const fieldPath = currentPath.join('.')
+
       if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
         // It's a nested category
         return (
-          <div key={currentPath.join('.')} className="state-category">
+          <div key={fieldPath} className="state-category">
             <div className="category-name">▼ {key}</div>
             <div className="category-children">
               {renderStateTree(value, currentPath)}
@@ -159,9 +245,16 @@ function Sidebar({ entities, currentEntity, cursorPosition, onEntityChange, onEn
       } else {
         // It's a value
         return (
-          <div key={currentPath.join('.')} className="state-value">
+          <div key={fieldPath} className="state-value">
             <span className="value-key">{key}:</span>
             <span className="value-content">{String(value)}</span>
+            <button
+              className="btn-delete-field"
+              onClick={() => handleDeleteField(fieldPath)}
+              title="Delete field completely from all markers"
+            >
+              🗑️
+            </button>
           </div>
         )
       }
@@ -235,6 +328,16 @@ function Sidebar({ entities, currentEntity, cursorPosition, onEntityChange, onEn
                 <button
                   onClick={() => {
                     const entity = entities.find(e => e.id === currentEntity)
+                    if (entity) handleDuplicateEntity(entity.id, entity.name)
+                  }}
+                  className="btn-icon"
+                  title="Duplicate character"
+                >
+                  📋
+                </button>
+                <button
+                  onClick={() => {
+                    const entity = entities.find(e => e.id === currentEntity)
                     if (entity) handleStartEdit(entity)
                   }}
                   className="btn-icon"
@@ -261,6 +364,17 @@ function Sidebar({ entities, currentEntity, cursorPosition, onEntityChange, onEn
       <div className="sidebar-position">
         Position: Character {cursorPosition}
       </div>
+
+      {currentEntity && (
+        <div className="sidebar-sort-controls">
+          <label>Sort:</label>
+          <select value={sortMode} onChange={(e) => setSortMode(e.target.value)}>
+            <option value="created">Creation Order</option>
+            <option value="modified">Recently Modified</option>
+            <option value="alphabetical">Alphabetical</option>
+          </select>
+        </div>
+      )}
 
       <div className="sidebar-content">
         {loading && <div className="loading">Loading state...</div>}

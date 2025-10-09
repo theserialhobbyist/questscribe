@@ -44,14 +44,14 @@ function MarkerDialog({ isOpen, onClose, entities, cursorPosition, onMarkerInser
   const handleAddField = () => {
     setFields([
       ...fields,
-      { fieldName: '', changeType: 'absolute', value: '', isCustom: false }
+      { fieldName: '', changeType: 'relative', value: '', isCustom: false }
     ])
   }
 
   const handleAddCustomField = () => {
     setFields([
       ...fields,
-      { fieldName: '', changeType: 'absolute', value: '', isCustom: true }
+      { fieldName: '', changeType: 'relative', value: '', isCustom: true }
     ])
   }
 
@@ -293,18 +293,21 @@ function MarkerDialog({ isOpen, onClose, entities, cursorPosition, onMarkerInser
                     >
                       <option value="absolute">Set to</option>
                       <option value="relative">Add/Subtract</option>
+                      <option value="remove">Remove</option>
                     </select>
-                    <input
-                      type="text"
-                      placeholder="Value"
-                      value={field.value}
-                      onChange={e => handleFieldChange(index, 'value', e.target.value)}
-                      style={{ flex: '1' }}
-                    />
+                    {field.changeType !== 'remove' && (
+                      <input
+                        type="text"
+                        placeholder="Value"
+                        value={field.value}
+                        onChange={e => handleFieldChange(index, 'value', e.target.value)}
+                        style={{ flex: '1' }}
+                      />
+                    )}
                     <button
                       className="btn-remove"
                       onClick={() => handleRemoveField(index)}
-                      title="Remove field"
+                      title="Remove from list"
                     >
                       ×
                     </button>
