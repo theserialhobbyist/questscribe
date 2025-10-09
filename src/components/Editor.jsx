@@ -10,12 +10,14 @@ import { Plugin } from 'prosemirror-state'
 import { AllSelection } from 'prosemirror-state'
 import { invoke } from '@tauri-apps/api/tauri'
 import EditorToolbar from './EditorToolbar'
+import ContextMenu from './ContextMenu'
 import 'prosemirror-view/style/prosemirror.css'
 
 const Editor = forwardRef(({ onCursorMove, onWordCountChange, onEditorReady, onInsertStateChange }, ref) => {
   const editorRef = useRef(null)
   const viewRef = useRef(null)
   const [editorView, setEditorView] = useState(null)
+  const [contextMenu, setContextMenu] = useState(null)
 
   // Expose functions to parent via ref
   useImperativeHandle(ref, () => ({
@@ -252,6 +254,39 @@ const Editor = forwardRef(({ onCursorMove, onWordCountChange, onEditorReady, onI
       )
       view.dispatch(tr)
       view.focus()
+    },
+    insertSectionBreak: () => {
+      if (!viewRef.current) return
+      const view = viewRef.current
+      const { from } = view.state.selection
+
+      const breakText = '\n* * *\n'
+      const lines = breakText.split('\n')
+      const nodes = lines.map(line =>
+        markerSchema.nodes.paragraph.create(
+          null,
+          line ? [markerSchema.text(line)] : []
+        )
+      )
+
+      const tr = view.state.tr.replaceWith(from, from, nodes)
+      view.dispatch(tr)
+      view.focus()
+    },
+    insertChapterBreak: () => {
+      if (!viewRef.current) return
+      const view = viewRef.current
+      const { from } = view.state.selection
+
+      const heading = markerSchema.nodes.heading.create(
+        { level: 1 },
+        [markerSchema.text('Chapter X')]
+      )
+      const emptyPara = markerSchema.nodes.paragraph.create()
+
+      const tr = view.state.tr.replaceWith(from, from, [heading, emptyPara])
+      view.dispatch(tr)
+      view.focus()
     }
   }))
 
@@ -284,6 +319,97 @@ const Editor = forwardRef(({ onCursorMove, onWordCountChange, onEditorReady, onI
           return true
         }
         return false
+      },
+      handleDOMEvents: {
+        contextmenu: (view, event) => {
+          event.preventDefault()
+
+          const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })
+          if (!pos) return false
+
+          // Check if right-clicking on a marker
+          const $pos = view.state.doc.resolve(pos.pos)
+          const node = view.state.doc.nodeAt(pos.pos)
+          let clickedMarker = null
+
+          if (node && node.type.name === 'marker') {
+            clickedMarker = {
+              id: node.attrs.id,
+              entity_id: node.attrs.entityId,
+              position: pos.pos,
+              changes: node.attrs.changes,
+              visual: node.attrs.visual,
+              description: node.attrs.description,
+              created_at: node.attrs.createdAt,
+              modified_at: node.attrs.modifiedAt
+            }
+          }
+
+          // Build context menu items
+          const menuItems = []
+
+          if (clickedMarker) {
+            // Marker-specific menu
+            menuItems.push(
+              { icon: '✏️', label: 'Edit Marker', action: () => window.editMarker?.(clickedMarker) },
+              { icon: '🗑️', label: 'Delete Marker', action: () => {
+                // Delete the marker node
+                const tr = view.state.tr.delete(pos.pos, pos.pos + node.nodeSize)
+                view.dispatch(tr)
+              }},
+              { divider: true }
+            )
+          }
+
+          menuItems.push(
+            { icon: '✨', label: 'Insert State Change', action: () => {
+              // Move cursor to clicked position first
+              const tr = view.state.tr.setSelection(view.state.selection.constructor.near($pos))
+              view.dispatch(tr)
+              onInsertStateChange?.()
+            }},
+            { divider: true },
+            { icon: '📄', label: 'Insert Section Break', action: () => {
+              const tr = view.state.tr.setSelection(view.state.selection.constructor.near($pos))
+              view.dispatch(tr)
+              // Trigger section break insertion
+              if (viewRef.current) {
+                const breakText = '\n* * *\n'
+                const lines = breakText.split('\n')
+                const nodes = lines.map(line =>
+                  markerSchema.nodes.paragraph.create(
+                    null,
+                    line ? [markerSchema.text(line)] : []
+                  )
+                )
+                const insertTr = view.state.tr.replaceWith(pos.pos, pos.pos, nodes)
+                view.dispatch(insertTr)
+              }
+            }},
+            { icon: '📖', label: 'Insert Chapter Break', action: () => {
+              const tr = view.state.tr.setSelection(view.state.selection.constructor.near($pos))
+              view.dispatch(tr)
+              // Trigger chapter break insertion
+              if (viewRef.current) {
+                const heading = markerSchema.nodes.heading.create(
+                  { level: 1 },
+                  [markerSchema.text('Chapter X')]
+                )
+                const emptyPara = markerSchema.nodes.paragraph.create()
+                const insertTr = view.state.tr.replaceWith(pos.pos, pos.pos, [heading, emptyPara])
+                view.dispatch(insertTr)
+              }
+            }}
+          )
+
+          setContextMenu({
+            x: event.clientX,
+            y: event.clientY,
+            items: menuItems
+          })
+
+          return true
+        }
       }
     },
     // Sync marker positions to backend when document changes
@@ -427,6 +553,14 @@ const Editor = forwardRef(({ onCursorMove, onWordCountChange, onEditorReady, onI
     <div className="editor-container">
       <EditorToolbar editorView={editorView} onInsertStateChange={onInsertStateChange} />
       <div ref={editorRef} className="editor" />
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={contextMenu.items}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   )
 })
