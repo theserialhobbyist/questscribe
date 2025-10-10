@@ -6,7 +6,7 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "LitRPG Writer",
+    "productName": "QuestScribe",
     "version": "0.1.0"
   },
   "tauri": {
@@ -38,7 +38,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.litrpg-writer.app",
+      "identifier": "com.questscribe.app",
       "targets": "all"
     },
     "security": {
@@ -48,7 +48,7 @@
       {
         "fullscreen": false,
         "resizable": true,
-        "title": "LitRPG Writer",
+        "title": "QuestScribe",
         "width": 1200,
         "height": 800,
         "minWidth": 800,

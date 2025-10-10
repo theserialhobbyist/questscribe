@@ -217,9 +217,10 @@ body.dark-mode .btn-danger {
   border-bottom: 1px solid #ddd;
 }
 
-.toolbar h1 {
-  font-size: 18px;
+.toolbar .app-logo {
+  height: 32px;
   margin-right: 20px;
+  object-fit: contain;
 }
 
 .toolbar button {

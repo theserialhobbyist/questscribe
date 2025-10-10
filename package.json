@@ -1,7 +1,7 @@
 {
-  "name": "litrpg-writer",
+  "name": "questscribe",
   "version": "0.1.0",
-  "description": "A word processor for writing LitRPG novels with character state tracking",
+  "description": "QuestScribe - A word processor for writing LitRPG novels with character state tracking",
   "scripts": {
     "dev": "tauri dev",
     "dev:vite": "vite",

@@ -5,6 +5,7 @@ import Editor from './components/Editor'
 import Sidebar from './components/Sidebar'
 import MarkerDialog from './components/MarkerDialog'
 import StatusBar from './components/StatusBar'
+import logo from './QuestScribeLogo.png'
 
 function App() {
   const [currentEntity, setCurrentEntity] = useState(null)
@@ -278,7 +279,7 @@ function App() {
   return (
     <div className="app">
       <div className="toolbar">
-        <h1>QuestScribe</h1>
+        <img src={logo} alt="QuestScribe" className="app-logo" />
         <button onClick={handleNewDocument}>New</button>
         <button onClick={handleLoadDocument}>Open</button>
         <button onClick={handleSaveDocument}>Save</button>
