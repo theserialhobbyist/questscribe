@@ -65,12 +65,6 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tagName: v__VERSION__  # Only used for releases
-          releaseName: 'QuestScribe v__VERSION__'
-          releaseBody: 'See CHANGELOG.md for details'
-          releaseDraft: true
-          prerelease: false
 
       - name: Upload artifacts (Windows)
         if: matrix.platform == 'windows-latest'
