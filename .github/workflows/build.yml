@@ -3,8 +3,20 @@ name: Build QuestScribe
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - 'QuestScribeScreenshot*.png'
+      - 'QuestScribeLogo.png'
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - 'QuestScribeScreenshot*.png'
+      - 'QuestScribeLogo.png'
   workflow_dispatch:  # Allow manual triggering
 
 jobs:
