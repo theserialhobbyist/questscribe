@@ -296,6 +296,11 @@ const Editor = forwardRef(({ onCursorMove, onWordCountChange, onEditorReady, onI
       handleClickOn(view, pos, node, nodePos, event) {
         // Check if clicked node is a marker
         if (node.type.name === 'marker') {
+          // Only handle left-click (button 0), not right-click (button 2)
+          if (event.button !== 0) {
+            return false
+          }
+
           event.preventDefault()
           event.stopPropagation()
 
@@ -319,97 +324,6 @@ const Editor = forwardRef(({ onCursorMove, onWordCountChange, onEditorReady, onI
           return true
         }
         return false
-      }
-    },
-    handleDOMEvents: {
-      contextmenu: (view, event) => {
-          event.preventDefault()
-
-          const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })
-          if (!pos) return false
-
-          // Check if right-clicking on a marker
-          const $pos = view.state.doc.resolve(pos.pos)
-          const node = view.state.doc.nodeAt(pos.pos)
-          let clickedMarker = null
-
-          if (node && node.type.name === 'marker') {
-            clickedMarker = {
-              id: node.attrs.id,
-              entity_id: node.attrs.entityId,
-              position: pos.pos,
-              changes: node.attrs.changes,
-              visual: node.attrs.visual,
-              description: node.attrs.description,
-              created_at: node.attrs.createdAt,
-              modified_at: node.attrs.modifiedAt
-            }
-          }
-
-          // Build context menu items
-          const menuItems = []
-
-          if (clickedMarker) {
-            // Marker-specific menu
-            menuItems.push(
-              { icon: '✏️', label: 'Edit Marker', action: () => window.editMarker?.(clickedMarker) },
-              { icon: '🗑️', label: 'Delete Marker', action: () => {
-                // Delete the marker node
-                const tr = view.state.tr.delete(pos.pos, pos.pos + node.nodeSize)
-                view.dispatch(tr)
-              }},
-              { divider: true }
-            )
-          }
-
-          menuItems.push(
-            { icon: '✨', label: 'Insert State Change', action: () => {
-              // Move cursor to clicked position first
-              const tr = view.state.tr.setSelection(view.state.selection.constructor.near($pos))
-              view.dispatch(tr)
-              onInsertStateChange?.()
-            }},
-            { divider: true },
-            { icon: '📄', label: 'Insert Section Break', action: () => {
-              const tr = view.state.tr.setSelection(view.state.selection.constructor.near($pos))
-              view.dispatch(tr)
-              // Trigger section break insertion
-              if (viewRef.current) {
-                const breakText = '\n* * *\n'
-                const lines = breakText.split('\n')
-                const nodes = lines.map(line =>
-                  markerSchema.nodes.paragraph.create(
-                    null,
-                    line ? [markerSchema.text(line)] : []
-                  )
-                )
-                const insertTr = view.state.tr.replaceWith(pos.pos, pos.pos, nodes)
-                view.dispatch(insertTr)
-              }
-            }},
-            { icon: '📖', label: 'Insert Chapter Break', action: () => {
-              const tr = view.state.tr.setSelection(view.state.selection.constructor.near($pos))
-              view.dispatch(tr)
-              // Trigger chapter break insertion
-              if (viewRef.current) {
-                const heading = markerSchema.nodes.heading.create(
-                  { level: 1 },
-                  [markerSchema.text('Chapter X')]
-                )
-                const emptyPara = markerSchema.nodes.paragraph.create()
-                const insertTr = view.state.tr.replaceWith(pos.pos, pos.pos, [heading, emptyPara])
-                view.dispatch(insertTr)
-              }
-            }}
-          )
-
-          setContextMenu({
-            x: event.clientX,
-            y: event.clientY,
-            items: menuItems
-          })
-
-          return true
       }
     },
     // Sync marker positions to backend when document changes
@@ -552,7 +466,153 @@ const Editor = forwardRef(({ onCursorMove, onWordCountChange, onEditorReady, onI
   return (
     <div className="editor-container">
       <EditorToolbar editorView={editorView} onInsertStateChange={onInsertStateChange} />
-      <div ref={editorRef} className="editor" />
+      <div
+        ref={editorRef}
+        className="editor"
+        onContextMenu={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+
+          // Handle context menu here since the plugin handler isn't being called
+          if (!viewRef.current) return
+
+          const view = viewRef.current
+          const pos = view.posAtCoords({ left: e.clientX, top: e.clientY })
+          if (!pos) return
+
+          // Check if right-clicking on a marker
+          const node = view.state.doc.nodeAt(pos.pos)
+          let clickedMarker = null
+
+          if (node && node.type.name === 'marker') {
+            clickedMarker = {
+              id: node.attrs.id,
+              entity_id: node.attrs.entityId,
+              position: pos.pos,
+              changes: node.attrs.changes,
+              visual: node.attrs.visual,
+              description: node.attrs.description,
+              created_at: node.attrs.createdAt,
+              modified_at: node.attrs.modifiedAt
+            }
+          }
+
+          // Build context menu items
+          const menuItems = []
+
+          if (clickedMarker) {
+            // Marker-specific menu
+            menuItems.push(
+              { icon: '✏️', label: 'Edit Marker', action: () => window.editMarker?.(clickedMarker) },
+              { icon: '🗑️', label: 'Delete Marker', action: () => {
+                // Delete the marker node
+                const tr = view.state.tr.delete(pos.pos, pos.pos + node.nodeSize)
+                view.dispatch(tr)
+              }},
+              { divider: true }
+            )
+          }
+
+          menuItems.push(
+            { icon: '✨', label: 'Insert State Change', action: () => {
+              // Move cursor to clicked position first
+              const $pos = view.state.doc.resolve(pos.pos)
+              const tr = view.state.tr.setSelection(view.state.selection.constructor.near($pos))
+              view.dispatch(tr)
+              onInsertStateChange?.()
+            }},
+            { divider: true },
+            { icon: '📄', label: 'Insert Section Break', action: () => {
+              const $pos = view.state.doc.resolve(pos.pos)
+              const tr = view.state.tr.setSelection(view.state.selection.constructor.near($pos))
+              view.dispatch(tr)
+
+              // Insert section break
+              const breakText = '\n* * *\n'
+              const lines = breakText.split('\n')
+              const nodes = lines.map(line =>
+                markerSchema.nodes.paragraph.create(
+                  null,
+                  line ? [markerSchema.text(line)] : []
+                )
+              )
+              const insertTr = view.state.tr.replaceWith(pos.pos, pos.pos, nodes)
+              view.dispatch(insertTr)
+            }},
+            { icon: '📖', label: 'Insert Chapter Break', action: () => {
+              const $pos = view.state.doc.resolve(pos.pos)
+              const tr = view.state.tr.setSelection(view.state.selection.constructor.near($pos))
+              view.dispatch(tr)
+
+              // Insert chapter heading
+              const heading = markerSchema.nodes.heading.create(
+                { level: 1 },
+                [markerSchema.text('Chapter X')]
+              )
+              const emptyPara = markerSchema.nodes.paragraph.create()
+              const insertTr = view.state.tr.replaceWith(pos.pos, pos.pos, [heading, emptyPara])
+              view.dispatch(insertTr)
+            }},
+            { divider: true },
+            { icon: '📋', label: 'Copy', action: () => {
+              document.execCommand('copy')
+            }},
+            { icon: '📄', label: 'Paste', action: async () => {
+              try {
+                const text = await navigator.clipboard.readText()
+                if (text) {
+                  const $pos = view.state.doc.resolve(pos.pos)
+                  const tr = view.state.tr.setSelection(view.state.selection.constructor.near($pos))
+                  view.dispatch(tr)
+
+                  // Insert the pasted text
+                  const lines = text.split('\n')
+                  const nodes = lines.map(line =>
+                    markerSchema.nodes.paragraph.create(
+                      null,
+                      line ? [markerSchema.text(line)] : []
+                    )
+                  )
+                  const insertTr = view.state.tr.replaceWith(pos.pos, pos.pos, nodes)
+                  view.dispatch(insertTr)
+                }
+              } catch (err) {
+                console.error('Failed to read clipboard:', err)
+              }
+            }},
+            { icon: '📝', label: 'Paste Plain Text', action: async () => {
+              try {
+                const text = await navigator.clipboard.readText()
+                if (text) {
+                  const $pos = view.state.doc.resolve(pos.pos)
+                  const tr = view.state.tr.setSelection(view.state.selection.constructor.near($pos))
+                  view.dispatch(tr)
+
+                  // Strip any formatting and insert as plain text
+                  const plainText = text.replace(/\r\n/g, '\n')
+                  const lines = plainText.split('\n')
+                  const nodes = lines.map(line =>
+                    markerSchema.nodes.paragraph.create(
+                      null,
+                      line ? [markerSchema.text(line)] : []
+                    )
+                  )
+                  const insertTr = view.state.tr.replaceWith(pos.pos, pos.pos, nodes)
+                  view.dispatch(insertTr)
+                }
+              } catch (err) {
+                console.error('Failed to read clipboard:', err)
+              }
+            }}
+          )
+
+          setContextMenu({
+            x: e.clientX,
+            y: e.clientY,
+            items: menuItems
+          })
+        }}
+      />
       {contextMenu && (
         <ContextMenu
           x={contextMenu.x}

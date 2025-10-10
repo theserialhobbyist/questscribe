@@ -12,7 +12,8 @@
       "Bash(findstr:*)",
       "Bash(git reset:*)",
       "Bash(cargo:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []
