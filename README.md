@@ -1,178 +1,279 @@
-# LitRPG Writer
+<div align="center">
 
-A specialized word processor for writing LitRPG novels with character state tracking.
+<img src="QuestScribeLogo.png" alt="QuestScribe Logo" width="500"/>
 
-## Getting Started
+# QuestScribe
+
+### Write your story. Track your stats. Never lose continuity.
+
+[![Build Status](https://github.com/theserialhobbyist/questscribe/workflows/Build%20QuestScribe/badge.svg)](https://github.com/theserialhobbyist/questscribe/actions)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://github.com/theserialhobbyist/questscribe)
+
+A specialized word processor for writing LitRPG novels with **dynamic character state tracking**.
+
+[Features](#-features) • [Screenshots](#-screenshots) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Building](#-building) • [Documentation](#-documentation)
+
+</div>
+
+---
+
+## 🎮 What is QuestScribe?
+
+QuestScribe is a desktop word processor built specifically for LitRPG authors. It lets you embed **state change markers** directly in your text to track character progression—levels, stats, items, skills—automatically calculating the current state at any point in your story.
+
+**Never lose track of your character's HP mid-battle. Never forget which spells they've learned. Never wonder what's in their inventory.**
+
+<div align="center">
+  <img src="QuestScribeScreenshot1.png" alt="QuestScribe Main Interface" width="800"/>
+  <p><i>Main editor with real-time character state tracking</i></p>
+</div>
+
+---
+
+## ✨ Features
+
+### 📝 **Rich Text Editing**
+- Full-featured ProseMirror editor with formatting support
+- Bold, italic, headings, code blocks
+- Section breaks (dinkus) and chapter markers
+- Keyboard shortcuts (Ctrl/Cmd + B, I, Z, etc.)
+- Undo/redo support
+
+### 🎯 **State Change Markers**
+<div align="center">
+  <img src="QuestScribeScreenshot2.png" alt="State Change Marker Dialog" width="600"/>
+  <p><i>Intuitive marker creation dialog</i></p>
+</div>
+
+- **Inline tracking**: Place markers directly in your text at the exact moment changes happen
+- **Visual indicators**: Color-coded emoji markers (✨⬆️⬇️💗🛡️⚔️ and more)
+- **Absolute & Relative changes**: Set exact values or modify existing ones
+- **Nested fields**: Organize stats hierarchically (e.g., `stats.HP`, `spells.fire.Fireball`)
+- **Descriptions**: Add notes like "Leveled up after boss fight"
+
+### 📊 **Character Management**
+- Track multiple characters simultaneously
+- Each character has their own color for easy identification
+- Duplicate characters to create templates
+- Delete fields completely across all markers
+- Sort fields by creation date, modification date, or alphabetically
+
+### 🧮 **Automatic State Computation**
+- Real-time state calculation at your cursor position
+- Applies all markers chronologically up to current location
+- Supports Add/Subtract operations (HP +10, Mana -5)
+- Remove fields when items are lost or skills forgotten
+
+### 📄 **Document Management**
+<div align="center">
+  <img src="QuestScribeScreenshot3.png" alt="Character Sheet Insertion" width="800"/>
+  <p><i>Insert formatted character sheets anywhere in your document</i></p>
+</div>
+
+- **Save/Load**: Native `.qsd` (QuestScribe Document) format
+- **Export**: Plain text (.txt), Rich Text (.rtf), Microsoft Word (.docx)
+- **Character Sheets**: Insert formatted stat sheets at cursor position
+- **Navigation**: Jump between chapters and markers with keyboard shortcuts
+
+### 🎨 **User Experience**
+- **Dark mode**: Easy on the eyes for long writing sessions
+- **Context menu**: Right-click for quick actions
+- **Word count**: Live word count in status bar
+- **Cross-platform**: Works on Windows, macOS, and Linux
+
+---
+
+## 📸 Screenshots
+
+<details>
+<summary><b>Click to see more screenshots</b></summary>
+
+### Writing Interface
+<img src="QuestScribeScreenshot1.png" alt="Writing Interface" width="100%"/>
+
+### State Change Marker Dialog
+<img src="QuestScribeScreenshot2.png" alt="Marker Dialog" width="100%"/>
+
+### Character Sheet Insertion
+<img src="QuestScribeScreenshot3.png" alt="Character Sheet" width="100%"/>
+
+</details>
+
+---
+
+## 💾 Installation
+
+### Download Pre-built Binaries
+
+**Coming Soon!** Pre-built installers will be available from the [Releases](https://github.com/theserialhobbyist/questscribe/releases) page.
+
+- **Windows**: `.exe` installer or `.msi` package
+- **macOS**: `.dmg` disk image (Universal: Intel + Apple Silicon)
+- **Linux**: `.deb` (Ubuntu/Debian), `.AppImage` (universal)
+
+### Build from Source
+
+See [Building from Source](#-building) below.
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
-Make sure you have installed:
-- Rust (from https://rustup.rs/)
-- Node.js (from https://nodejs.org/)
-- Visual Studio Build Tools (Windows only)
+- **Rust**: Install from [rustup.rs](https://rustup.rs/)
+- **Node.js**: Install from [nodejs.org](https://nodejs.org/) (v16 or later)
+- **System Dependencies**:
+  - **Windows**: Visual Studio Build Tools with "Desktop development with C++"
+  - **macOS**: Xcode Command Line Tools
+  - **Linux**: See [PLATFORM_COMPATIBILITY.md](PLATFORM_COMPATIBILITY.md)
 
-### Initial Setup
-
-1. **Create the project structure:**
-
-```bash
-mkdir litrpg-writer
-cd litrpg-writer
-```
-
-2. **Copy all the files from the artifacts into your project directory:**
-
-```
-litrpg-writer/
-├── src/
-│   ├── components/
-│   │   ├── Editor.jsx
-│   │   └── Sidebar.jsx
-│   ├── App.jsx
-│   ├── main.jsx
-│   └── styles.css
-├── src-tauri/
-│   ├── src/
-│   │   ├── main.rs
-│   │   └── state.rs
-│   ├── build.rs
-│   ├── Cargo.toml
-│   └── tauri.conf.json
-├── index.html
-├── package.json
-├── vite.config.js
-└── README.md
-```
-
-3. **Install dependencies:**
+### Running the Development Build
 
 ```bash
+# Clone the repository
+git clone https://github.com/theserialhobbyist/questscribe.git
+cd questscribe
+
+# Install dependencies
 npm install
-```
 
-This will install all the JavaScript/React dependencies.
-
-4. **Install Tauri CLI globally (if you haven't already):**
-
-```bash
-npm install -g @tauri-apps/cli
-```
-
-### Running the Application
-
-To run the app in development mode with hot reload:
-
-```bash
+# Start development server
 npm run dev
 ```
 
-The first time you run this, it will take several minutes because:
-- Rust needs to compile all dependencies
-- Tauri needs to build the native application
+The first run takes several minutes to compile Rust dependencies. Subsequent runs are faster (~30 seconds).
 
-Subsequent runs will be much faster (30-60 seconds).
+### Using QuestScribe
 
-### What You'll See
+1. **Create a character**: Click "Create New Character" in the sidebar
+2. **Write your story**: Type in the main editor area
+3. **Add state changes**: Click "✨ State Change" button or right-click in text
+4. **Track progression**: Watch the sidebar update as you move your cursor
+5. **Save your work**: Click "Save" to create a `.qsd` file
 
-When the app starts, you'll see:
-- A text editor (using ProseMirror) in the main area
-- A sidebar on the right showing "Character State"
-- A toolbar at the top with buttons (not all functional yet)
-- A reference character called "Example Hero (Reference)" in the dropdown
+---
 
-You can:
-- Type in the editor
-- See the cursor position update in the sidebar
-- Switch between characters (once you create more)
+## 🔨 Building
 
-### Current Features (Phase 1)
+### Option 1: Automated (Recommended) - GitHub Actions
 
-✅ Basic Tauri + React + Rust setup
-✅ ProseMirror text editor with undo/redo
-✅ Sidebar panel for character state
-✅ Entity (character) system in Rust backend
-✅ Communication between frontend and backend
+Simply push a version tag to automatically build for all platforms:
 
-### Not Yet Implemented
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
 
-The following features are planned but not yet built:
-- Marker creation and insertion
-- Marker visualization in the editor
-- State change tracking
-- Icon and color customization
-- Saving/loading documents
-- RTF export
+GitHub Actions will:
+- ✅ Build for Windows, macOS, and Linux simultaneously
+- ✅ Create installers for all platforms
+- ✅ Create a GitHub Release with all artifacts
 
-### Building for Production
+See [CICD_GUIDE.md](CICD_GUIDE.md) for detailed instructions.
 
-To create a distributable application:
+### Option 2: Manual Local Build
+
+To build locally on your current platform:
 
 ```bash
 npm run build
+npm run tauri build
 ```
 
-This will create installers in `src-tauri/target/release/bundle/`:
-- Windows: `.msi` installer and `.exe` portable
-- The build process takes 5-10 minutes
+**Output locations:**
+- **Windows**: `src-tauri/target/release/bundle/nsis/*.exe`
+- **macOS**: `src-tauri/target/release/bundle/dmg/*.dmg`
+- **Linux**: `src-tauri/target/release/bundle/deb/*.deb` or `appimage/*.AppImage`
 
-## Project Structure
+See [PLATFORM_COMPATIBILITY.md](PLATFORM_COMPATIBILITY.md) for platform-specific requirements.
 
-### Frontend (JavaScript/React)
-- **src/App.jsx**: Main application component, manages state
-- **src/components/Editor.jsx**: ProseMirror text editor
-- **src/components/Sidebar.jsx**: Character state display panel
-- **src/styles.css**: All styling
+---
 
-### Backend (Rust)
-- **src-tauri/src/main.rs**: Tauri application entry point, command handlers
-- **src-tauri/src/state.rs**: Data structures (Entity, Marker, StateValue, etc.)
+## 📚 Documentation
 
-### Communication
-Frontend calls Rust functions using:
-```javascript
-import { invoke } from '@tauri-apps/api/tauri'
-const result = await invoke('command_name', { param: value })
-```
+- **[CICD_GUIDE.md](CICD_GUIDE.md)** - How to create automated releases with GitHub Actions
+- **[PLATFORM_COMPATIBILITY.md](PLATFORM_COMPATIBILITY.md)** - Cross-platform building and compatibility
+- **[CLAUDE.md](CLAUDE.md)** - Development guidance for AI assistants
+- **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - Current implementation status
 
-## Troubleshooting
+---
 
-### "error: linker `link.exe` not found"
-You need to install Visual Studio Build Tools with "Desktop development with C++" workload.
+## 🏗️ Architecture
 
-### "Failed to resolve entry for package"
-Run `npm install` to ensure all dependencies are installed.
+QuestScribe is built with:
 
-### Port 1420 already in use
-Another dev server is running. Close it or change the port in `vite.config.js`.
+- **Frontend**: React + ProseMirror (rich text editing)
+- **Backend**: Rust + Tauri (native desktop performance)
+- **State Management**: Rust HashMap with backward-search algorithm
+- **Serialization**: JSON-based document format
 
-### Slow first compilation
-This is normal! Rust compiles everything from scratch the first time. Subsequent builds are much faster.
+### Key Technologies
 
-### Hot reload not working
-Stop the dev server (Ctrl+C) and run `npm run dev` again.
+- [Tauri](https://tauri.app/) - Build native desktop apps with web technologies
+- [ProseMirror](https://prosemirror.net/) - Extensible rich text editor
+- [React](https://react.dev/) - UI component library
+- [Rust](https://www.rust-lang.org/) - High-performance backend
 
-## Next Steps
+---
 
-Now that the foundation is working, you can start implementing:
+## 🛣️ Roadmap
 
-1. **Marker insertion UI** - Dialog for creating state changes
-2. **Marker rendering** - Show colored icons in the editor
-3. **State computation** - Implement the backwards search algorithm
-4. **Marker editing** - Click markers to edit them
-5. **Document save/load** - Persist projects to disk
+- [x] Core text editing with formatting
+- [x] State change markers
+- [x] Character management
+- [x] Save/load documents
+- [x] Export to multiple formats
+- [x] Dark mode
+- [x] Cross-platform builds
+- [ ] **Spell checker**
+- [ ] **Find/Replace**
+- [ ] **Markdown export**
+- [ ] **Cloud sync** (optional)
+- [ ] **Collaboration features** (future)
 
-## Development Tips
+---
 
-- Changes to `.jsx` files hot reload automatically
-- Changes to `.rs` files require recompiling (takes ~30 seconds)
-- Use browser dev tools (F12) to debug the frontend
-- Use `println!()` in Rust code to debug the backend (output appears in terminal)
-- The ProseMirror editor has excellent documentation at https://prosemirror.net/
+## 🤝 Contributing
 
-## Contributing
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-This is an open-source project. Contributions welcome!
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-## License
+---
 
-TBD
+## 📝 License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+**TL;DR**: You can freely use, modify, and distribute QuestScribe, even for commercial purposes. Just keep the copyright notice.
+
+---
+
+## 💬 Support
+
+- **Issues**: [GitHub Issues](https://github.com/theserialhobbyist/questscribe/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/theserialhobbyist/questscribe/discussions)
+
+---
+
+## 🙏 Acknowledgments
+
+- Built with [Tauri](https://tauri.app/)
+- Editor powered by [ProseMirror](https://prosemirror.net/)
+- Inspired by the LitRPG writing community
+
+---
+
+<div align="center">
+
+**Made with ❤️ for LitRPG authors**
+
+[⬆ Back to Top](#questscribe)
+
+</div>

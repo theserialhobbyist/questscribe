@@ -1,7 +1,23 @@
+//! QuestScribe - Core State Management
+//!
+//! This module defines the core data structures used throughout the application
+//! for tracking entities (characters), markers (state changes), and documents.
+//!
+//! # Key Concepts
+//!
+//! - **Entity**: A character or object being tracked (e.g., "Hero", "Villain")
+//! - **Marker**: A point in the text where state changes occur (e.g., level up, item gained)
+//! - **FieldChange**: A single state modification (e.g., HP +10, Level = 5)
+//! - **Document**: The complete saved state including text content, entities, and markers
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Mutex;
 
+/// Represents a character or object being tracked in the story
+///
+/// Entities have a unique ID, name, color for visual identification,
+/// and a list of fields that track their state (e.g., "stats.HP", "Level")
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Entity {
     pub id: String,
@@ -24,15 +40,19 @@ fn default_entity_color() -> String {
     "#FFD700".to_string() // Gold as default
 }
 
+/// Represents a state change marker in the document
+///
+/// Markers are placed at specific positions in the text and contain
+/// one or more field changes for a particular entity.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Marker {
     pub id: String,
-    pub position: usize,
+    pub position: usize, // Character position in the document
     pub entity_id: String,
     pub changes: Vec<FieldChange>,
     pub visual: MarkerVisual,
     #[serde(default)]
-    pub description: String,
+    pub description: String, // Optional description (e.g., "Leveled up after boss fight")
     #[serde(default = "default_timestamp")]
     pub created_at: i64,
     #[serde(default = "default_timestamp")]
@@ -53,12 +73,17 @@ pub struct FieldChange {
     pub value: String,
 }
 
+/// Types of state changes that can be applied
+///
+/// - **Absolute**: Set field to exact value (e.g., "Level = 5")
+/// - **Relative**: Add/subtract from current value (e.g., "HP +10")
+/// - **Remove**: Delete field from state entirely
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ChangeType {
     Absolute,
     Relative,
-    Remove, // Removes the field from the state
+    Remove,
 }
 
 

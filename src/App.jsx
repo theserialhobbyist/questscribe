@@ -1,3 +1,19 @@
+/**
+ * QuestScribe - Main Application Component
+ *
+ * This is the root component of the QuestScribe application, a specialized word processor
+ * for writing LitRPG novels with dynamic character state tracking.
+ *
+ * Features:
+ * - Rich text editing with ProseMirror
+ * - State change markers for tracking character progression
+ * - Document management (new, open, save, export)
+ * - Character/entity management
+ * - Dark mode support
+ *
+ * @component
+ */
+
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/tauri'
 import { open, save } from '@tauri-apps/api/dialog'
@@ -205,7 +221,7 @@ function App() {
       console.error('Failed to load document:', error)
       alert('Failed to load document: ' + error)
     }
-  }, [loadMarkers])
+  }, [loadEntities])
 
 
   const handleExportDocument = useCallback(async () => {

@@ -149,7 +149,6 @@ function MarkerDialog({ isOpen, onClose, entities, cursorPosition, onMarkerInser
           },
           description: description
         })
-        console.log('Marker updated:', marker)
       } else {
         // Insert new marker
         marker = await invoke('insert_marker', {
@@ -162,7 +161,6 @@ function MarkerDialog({ isOpen, onClose, entities, cursorPosition, onMarkerInser
           },
           description: description || null
         })
-        console.log('Marker inserted:', marker)
       }
 
       // Notify parent to add/update marker in editor

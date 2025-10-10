@@ -1,10 +1,11 @@
 [package]
-name = "litrpg-writer"
+name = "questscribe"
 version = "0.1.0"
-description = "A word processor for writing LitRPG novels"
-authors = ["you"]
-license = ""
-repository = ""
+description = "QuestScribe - A word processor for writing LitRPG novels with character state tracking"
+authors = ["QuestScribe Team"]
+license = "MIT"
+repository = "https://github.com/theserialhobbyist/questscribe"
+homepage = "https://github.com/theserialhobbyist/questscribe"
 edition = "2021"
 
 [build-dependencies]

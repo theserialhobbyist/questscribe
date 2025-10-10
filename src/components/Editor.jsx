@@ -438,8 +438,6 @@ const Editor = forwardRef(({ onCursorMove, onWordCountChange, onEditorReady, onI
       onWordCountChange(words.length)
     }
 
-    console.log('ProseMirror editor initialized')
-
     // Notify parent that editor is ready
     if (onEditorReady) {
       onEditorReady()

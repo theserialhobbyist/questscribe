@@ -1,3 +1,13 @@
+//! QuestScribe - Tauri Backend
+//!
+//! This is the Rust backend for QuestScribe, providing:
+//! - State computation engine for character progression tracking
+//! - Document serialization/deserialization (save/load)
+//! - Export functionality (TXT, RTF, DOCX)
+//! - Entity and marker management
+//!
+//! All Tauri commands are exposed to the frontend JavaScript via the invoke API.
+
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
@@ -957,45 +967,6 @@ fn text_to_prosemirror(text: &str) -> String {
 fn main() {
     // Initialize app state
     let app_state = AppState::new();
-    
-    // Add a reference character for demonstration
-    let mut field_metadata = std::collections::HashMap::new();
-    let base_time = 1000000000i64; // Some base timestamp for reference entity
-    let fields = vec![
-        "Level".to_string(),
-        "stats.HP".to_string(),
-        "stats.MP".to_string(),
-        "stats.Strength".to_string(),
-        "stats.Intelligence".to_string(),
-        "spells.fire.Firebolt".to_string(),
-        "spells.fire.Fireball".to_string(),
-        "spells.ice.Ice Storm".to_string(),
-        "inventory.Potions".to_string(),
-    ];
-
-    // Create metadata for each field with incremental creation times
-    for (i, field) in fields.iter().enumerate() {
-        field_metadata.insert(
-            field.clone(),
-            state::FieldMetadata {
-                created_at: base_time + (i as i64),
-                last_modified: base_time + (i as i64),
-            },
-        );
-    }
-
-    let reference_entity = Entity {
-        id: "reference".to_string(),
-        name: "Example Hero (Reference)".to_string(),
-        fields,
-        color: "#FFD700".to_string(), // Gold
-        field_metadata,
-    };
-
-    app_state.entities.lock().unwrap().insert(
-        reference_entity.id.clone(),
-        reference_entity,
-    );
 
     tauri::Builder::default()
         .manage(app_state)

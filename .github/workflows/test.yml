@@ -1,0 +1,44 @@
+name: Test QuestScribe
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate icons
+        run: npm run generate-icons
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Verify icon files exist
+        run: |
+          test -f src-tauri/icons/icon.icns && echo "✅ icon.icns exists"
+          test -f src-tauri/icons/icon.ico && echo "✅ icon.ico exists"
+          test -f src-tauri/icons/32x32.png && echo "✅ 32x32.png exists"
+          test -f src-tauri/icons/128x128.png && echo "✅ 128x128.png exists"
+          test -f src-tauri/icons/128x128@2x.png && echo "✅ 128x128@2x.png exists"
+
+      - name: Check Rust code
+        run: |
+          cd src-tauri
+          cargo check
+          cargo clippy -- -D warnings

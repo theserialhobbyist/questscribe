@@ -53,7 +53,6 @@ function Sidebar({ entities, currentEntity, cursorPosition, onEntityChange, onEn
         name: newCharacterName.trim(),
         color: newCharacterColor
       })
-      console.log('Created new character:', newEntity)
 
       setShowCreateDialog(false)
       setNewCharacterName('')
