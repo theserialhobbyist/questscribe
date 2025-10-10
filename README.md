@@ -4,7 +4,7 @@
 
 # QuestScribe
 
-### Write your story. Track your stats. Never lose continuity.
+### Write your story. Track your stats. Maintain continuity.
 
 [![Build Status](https://github.com/theserialhobbyist/questscribe/workflows/Build%20QuestScribe/badge.svg)](https://github.com/theserialhobbyist/questscribe/actions)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -20,7 +20,11 @@ A specialized word processor for writing LitRPG novels with **dynamic character 
 
 ## What is QuestScribe?
 
-QuestScribe is a desktop word processor built specifically for LitRPG authors. It lets you embed **state change markers** directly in your text to track character progression—levels, stats, items, skills—automatically calculating the current state at any point in your story.
+Currently in early alpha and looking for authors to help with testing! Please report bugs and any features you'd like to see.
+
+QuestScribe is a stat-tracking word processor built specifically for LitRPG authors. It lets you embed **state change markers** directly in your text to track character progression—levels, stats, items, skills, and—if you must—even harems. Stats will automatically update in the sidebar based on cursor position.
+
+This is intended for drafting your manuscript. Afterwards, you'll want to export the document and use traditional software for final formatting and polishing.
 
 **Never lose track of your character's HP mid-battle. Never forget which spells they've learned. Never wonder what's in their inventory.**
 
@@ -106,7 +110,9 @@ QuestScribe is a desktop word processor built specifically for LitRPG authors. I
 
 ### Download Pre-built Binaries
 
-**Coming Soon!** Pre-built installers will be available from the [Releases](https://github.com/theserialhobbyist/questscribe/releases) page.
+For users uninterested in development:
+
+Pre-built installers are available from the [Releases](https://github.com/theserialhobbyist/questscribe/releases) page.
 
 - **Windows**: `.exe` installer or `.msi` package
 - **macOS**: `.dmg` disk image (Universal: Intel + Apple Silicon)
@@ -150,6 +156,7 @@ The first run takes several minutes to compile Rust dependencies. Subsequent run
 1. **Create a character**: Click "Create New Character" in the sidebar
 2. **Write your story**: Type in the main editor area
 3. **Add state changes**: Click the "State Change" button or right-click in text
+4. **Enter fields and values**: Use an existing field or a create a new one to set value changes. You can categorize fields like this: Inventory.Weapons.HammerOfSmiting (Inventory > Weapons > Hammer of Smiting)
 4. **Track progression**: Watch the sidebar update as you move your cursor
 5. **Save your work**: Click "Save" to create a `.qsd` file
 
@@ -227,11 +234,8 @@ QuestScribe is built with:
 - [x] Export to multiple formats
 - [x] Dark mode
 - [x] Cross-platform builds
-- [ ] Spell checker
-- [ ] Find/Replace
-- [ ] Markdown export
-- [ ] Cloud sync (optional)
-- [ ] Collaboration features (future)
+- [ ] Formatting for publishing
+- [ ] More robust editing tools
 
 ---
 
@@ -266,13 +270,13 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 - Built with [Tauri](https://tauri.app/)
 - Editor powered by [ProseMirror](https://prosemirror.net/)
-- Inspired by the LitRPG writing community
+- Appreciation for the beauty of [Rust](https://https://rust-lang.org/)
 
 ---
 
 <div align="center">
 
-**Made with love for LitRPG authors**
+**Made with passion for the LitRPG genre**
 
 [Back to Top](#questscribe)
 
