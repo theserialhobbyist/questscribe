@@ -2,6 +2,7 @@
 
 <img src="QuestScribeLogo.png" alt="QuestScribe Logo" width="500"/>
 
+
 # QuestScribe
 
 ### Write your story. Track your stats. Never lose continuity.
