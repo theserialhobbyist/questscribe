@@ -791,7 +791,7 @@ fn export_document(
                 rtf_content.push_str("\\par\n\\par\n");
             }
 
-            rtf_content.push_str("}");
+            rtf_content.push('}');
 
             fs::write(&file_path, rtf_content)
                 .map_err(|e| format!("Failed to write file: {}", e))?;
@@ -890,7 +890,6 @@ fn import_document(file_path: String) -> Result<String, String> {
 // Basic RTF text extraction - strips RTF control codes
 fn extract_text_from_rtf(rtf: &str) -> String {
     let mut result = String::new();
-    let mut in_control = false;
     let mut in_group: i32 = 0;
     let mut chars = rtf.chars().peekable();
 
@@ -904,7 +903,6 @@ fn extract_text_from_rtf(rtf: &str) -> String {
             }
             '\\' => {
                 // Skip control word
-                in_control = true;
                 while let Some(&next_ch) = chars.peek() {
                     if next_ch.is_alphabetic() || next_ch == '-' || next_ch.is_numeric() {
                         chars.next();
@@ -915,19 +913,13 @@ fn extract_text_from_rtf(rtf: &str) -> String {
                         break;
                     }
                 }
-                in_control = false;
 
                 // Handle special RTF escapes
-                if let Some(&next_ch) = chars.peek() {
-                    match next_ch {
-                        '\\' | '{' | '}' => {
-                            result.push(chars.next().unwrap());
-                        }
-                        _ => {}
-                    }
+                if let Some(&('\\' | '{' | '}')) = chars.peek() {
+                    result.push(chars.next().unwrap());
                 }
             }
-            _ if !in_control && in_group <= 2 => {
+            _ if in_group <= 2 => {
                 // Only include text in main content (group level 1-2)
                 result.push(ch);
             }
