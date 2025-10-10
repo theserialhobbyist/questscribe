@@ -4,7 +4,6 @@ PROJECT_STATUS.md
 
 # Dependencies
 node_modules/
-package-lock.json
 
 # Build outputs
 dist/
@@ -42,5 +41,7 @@ Thumbs.db
 # Rust
 **/*.rs.bk
 *.pdb
-Cargo.lock
 nul
+
+# Note: Cargo.lock should be committed for applications (which this is)
+# See: https://doc.rust-lang.org/cargo/faq.html#why-do-binaries-have-cargolock-in-version-control-but-not-libraries
