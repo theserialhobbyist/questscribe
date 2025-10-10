@@ -319,9 +319,10 @@ const Editor = forwardRef(({ onCursorMove, onWordCountChange, onEditorReady, onI
           return true
         }
         return false
-      },
-      handleDOMEvents: {
-        contextmenu: (view, event) => {
+      }
+    },
+    handleDOMEvents: {
+      contextmenu: (view, event) => {
           event.preventDefault()
 
           const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })
@@ -409,7 +410,6 @@ const Editor = forwardRef(({ onCursorMove, onWordCountChange, onEditorReady, onI
           })
 
           return true
-        }
       }
     },
     // Sync marker positions to backend when document changes
