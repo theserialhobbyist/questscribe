@@ -3,8 +3,8 @@ name: Release QuestScribe
 on:
   push:
     tags:
-      - 'v*'  # Trigger on version tags like v0.1.0, v1.0.0, etc.
-  workflow_dispatch:  # Allow manual triggering from GitHub UI
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   create-release:
