@@ -1,7 +1,6 @@
 <div align="center">
 
-<img src="QuestScribeLogo.png" alt="QuestScribe Logo" width="500"/>
-
+<img src="QuestScribeLogo_whiteBG.png" alt="QuestScribe Logo" width="500"/>
 
 # QuestScribe
 
@@ -13,13 +12,13 @@
 
 A specialized word processor for writing LitRPG novels with **dynamic character state tracking**.
 
-[Features](#-features) • [Screenshots](#-screenshots) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Building](#-building) • [Documentation](#-documentation)
+[Features](#features) • [Screenshots](#screenshots) • [Installation](#installation) • [Quick Start](#quick-start) • [Building](#building) • [Documentation](#documentation)
 
 </div>
 
 ---
 
-## 🎮 What is QuestScribe?
+## What is QuestScribe?
 
 QuestScribe is a desktop word processor built specifically for LitRPG authors. It lets you embed **state change markers** directly in your text to track character progression—levels, stats, items, skills—automatically calculating the current state at any point in your story.
 
@@ -32,41 +31,41 @@ QuestScribe is a desktop word processor built specifically for LitRPG authors. I
 
 ---
 
-## ✨ Features
+## Features
 
-### 📝 **Rich Text Editing**
+### Rich Text Editing
 - Full-featured ProseMirror editor with formatting support
 - Bold, italic, headings, code blocks
 - Section breaks (dinkus) and chapter markers
 - Keyboard shortcuts (Ctrl/Cmd + B, I, Z, etc.)
 - Undo/redo support
 
-### 🎯 **State Change Markers**
+### State Change Markers
 <div align="center">
   <img src="QuestScribeScreenshot2.png" alt="State Change Marker Dialog" width="600"/>
   <p><i>Intuitive marker creation dialog</i></p>
 </div>
 
 - **Inline tracking**: Place markers directly in your text at the exact moment changes happen
-- **Visual indicators**: Color-coded emoji markers (✨⬆️⬇️💗🛡️⚔️ and more)
+- **Visual indicators**: Color-coded emoji markers
 - **Absolute & Relative changes**: Set exact values or modify existing ones
 - **Nested fields**: Organize stats hierarchically (e.g., `stats.HP`, `spells.fire.Fireball`)
 - **Descriptions**: Add notes like "Leveled up after boss fight"
 
-### 📊 **Character Management**
+### Character Management
 - Track multiple characters simultaneously
 - Each character has their own color for easy identification
 - Duplicate characters to create templates
 - Delete fields completely across all markers
 - Sort fields by creation date, modification date, or alphabetically
 
-### 🧮 **Automatic State Computation**
+### Automatic State Computation
 - Real-time state calculation at your cursor position
 - Applies all markers chronologically up to current location
 - Supports Add/Subtract operations (HP +10, Mana -5)
 - Remove fields when items are lost or skills forgotten
 
-### 📄 **Document Management**
+### Document Management
 <div align="center">
   <img src="QuestScribeScreenshot3.png" alt="Character Sheet Insertion" width="800"/>
   <p><i>Insert formatted character sheets anywhere in your document</i></p>
@@ -77,7 +76,7 @@ QuestScribe is a desktop word processor built specifically for LitRPG authors. I
 - **Character Sheets**: Insert formatted stat sheets at cursor position
 - **Navigation**: Jump between chapters and markers with keyboard shortcuts
 
-### 🎨 **User Experience**
+### User Experience
 - **Dark mode**: Easy on the eyes for long writing sessions
 - **Context menu**: Right-click for quick actions
 - **Word count**: Live word count in status bar
@@ -85,7 +84,7 @@ QuestScribe is a desktop word processor built specifically for LitRPG authors. I
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 
 <details>
 <summary><b>Click to see more screenshots</b></summary>
@@ -103,7 +102,7 @@ QuestScribe is a desktop word processor built specifically for LitRPG authors. I
 
 ---
 
-## 💾 Installation
+## Installation
 
 ### Download Pre-built Binaries
 
@@ -115,11 +114,11 @@ QuestScribe is a desktop word processor built specifically for LitRPG authors. I
 
 ### Build from Source
 
-See [Building from Source](#-building) below.
+See [Building from Source](#building) below.
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -150,13 +149,13 @@ The first run takes several minutes to compile Rust dependencies. Subsequent run
 
 1. **Create a character**: Click "Create New Character" in the sidebar
 2. **Write your story**: Type in the main editor area
-3. **Add state changes**: Click "✨ State Change" button or right-click in text
+3. **Add state changes**: Click the "State Change" button or right-click in text
 4. **Track progression**: Watch the sidebar update as you move your cursor
 5. **Save your work**: Click "Save" to create a `.qsd` file
 
 ---
 
-## 🔨 Building
+## Building
 
 ### Option 1: Automated (Recommended) - GitHub Actions
 
@@ -168,9 +167,9 @@ git push origin v0.1.0
 ```
 
 GitHub Actions will:
-- ✅ Build for Windows, macOS, and Linux simultaneously
-- ✅ Create installers for all platforms
-- ✅ Create a GitHub Release with all artifacts
+- Build for Windows, macOS, and Linux simultaneously
+- Create installers for all platforms
+- Create a GitHub Release with all artifacts
 
 See [CICD_GUIDE.md](CICD_GUIDE.md) for detailed instructions.
 
@@ -192,7 +191,7 @@ See [PLATFORM_COMPATIBILITY.md](PLATFORM_COMPATIBILITY.md) for platform-specific
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 - **[CICD_GUIDE.md](CICD_GUIDE.md)** - How to create automated releases with GitHub Actions
 - **[PLATFORM_COMPATIBILITY.md](PLATFORM_COMPATIBILITY.md)** - Cross-platform building and compatibility
@@ -201,7 +200,7 @@ See [PLATFORM_COMPATIBILITY.md](PLATFORM_COMPATIBILITY.md) for platform-specific
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 QuestScribe is built with:
 
@@ -219,7 +218,7 @@ QuestScribe is built with:
 
 ---
 
-## 🛣️ Roadmap
+## Roadmap
 
 - [x] Core text editing with formatting
 - [x] State change markers
@@ -228,15 +227,15 @@ QuestScribe is built with:
 - [x] Export to multiple formats
 - [x] Dark mode
 - [x] Cross-platform builds
-- [ ] **Spell checker**
-- [ ] **Find/Replace**
-- [ ] **Markdown export**
-- [ ] **Cloud sync** (optional)
-- [ ] **Collaboration features** (future)
+- [ ] Spell checker
+- [ ] Find/Replace
+- [ ] Markdown export
+- [ ] Cloud sync (optional)
+- [ ] Collaboration features (future)
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
@@ -248,7 +247,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ---
 
-## 📝 License
+## License
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
@@ -256,14 +255,14 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ---
 
-## 💬 Support
+## Support
 
 - **Issues**: [GitHub Issues](https://github.com/theserialhobbyist/questscribe/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/theserialhobbyist/questscribe/discussions)
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Built with [Tauri](https://tauri.app/)
 - Editor powered by [ProseMirror](https://prosemirror.net/)
@@ -273,8 +272,8 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 <div align="center">
 
-**Made with ❤️ for LitRPG authors**
+**Made with love for LitRPG authors**
 
-[⬆ Back to Top](#questscribe)
+[Back to Top](#questscribe)
 
 </div>
