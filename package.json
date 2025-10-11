@@ -1,6 +1,6 @@
 {
   "name": "questscribe",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "QuestScribe - A word processor for writing LitRPG novels with character state tracking",
   "license": "MIT",
   "author": "QuestScribe Contributors",

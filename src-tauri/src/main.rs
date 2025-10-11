@@ -13,6 +13,7 @@
 
 mod state;
 
+use serde::Serialize;
 use state::{Entity, Marker, FieldChange, MarkerVisual, Document, AppState, ChangeType};
 use std::fs;
 use std::path::PathBuf;
@@ -106,6 +107,40 @@ fn remove_nested_value(
     }
 
     remove_at_path(state, &parts);
+}
+
+// Helper function to flatten a state object into field changes
+fn flatten_state_to_changes(
+    state: &serde_json::Map<String, serde_json::Value>,
+    prefix: String,
+    changes: &mut Vec<FieldChange>,
+) {
+    for (key, value) in state.iter() {
+        let field_name = if prefix.is_empty() {
+            key.clone()
+        } else {
+            format!("{}.{}", prefix, key)
+        };
+
+        if let Some(obj) = value.as_object() {
+            // Nested object - recurse
+            flatten_state_to_changes(obj, field_name, changes);
+        } else {
+            // Leaf value - create a field change
+            let value_str = match value {
+                serde_json::Value::Number(n) => n.to_string(),
+                serde_json::Value::Bool(b) => b.to_string(),
+                serde_json::Value::String(s) => s.clone(),
+                _ => value.to_string(),
+            };
+
+            changes.push(FieldChange {
+                field_name,
+                value: value_str,
+                change_type: ChangeType::Absolute,
+            });
+        }
+    }
 }
 
 // Tauri command to get all entities
@@ -296,6 +331,7 @@ fn update_entity(
     state: tauri::State<AppState>,
 ) -> Result<Entity, String> {
     let mut entities = state.entities.lock().unwrap();
+    let mut markers = state.markers.lock().unwrap();
 
     let entity = entities
         .get_mut(&entity_id)
@@ -304,8 +340,15 @@ fn update_entity(
     if let Some(n) = name {
         entity.name = n;
     }
-    if let Some(c) = color {
-        entity.color = c;
+    if let Some(new_color) = color {
+        entity.color = new_color.clone();
+
+        // Update all markers for this entity to use the new color
+        for marker in markers.values_mut() {
+            if marker.entity_id == entity_id {
+                marker.visual.color = new_color.clone();
+            }
+        }
     }
 
     Ok(entity.clone())
@@ -334,15 +377,24 @@ fn delete_entity(
     Ok(())
 }
 
+// Return type for duplicate_entity command
+#[derive(Serialize)]
+struct DuplicateEntityResult {
+    entity: Entity,
+    marker: Option<Marker>,
+}
+
 // Tauri command to duplicate an entity
 // Creates a copy with a new ID and name, preserving fields and metadata
 #[tauri::command]
 fn duplicate_entity(
     entity_id: String,
     new_name: String,
+    cursor_position: usize,
     state: tauri::State<AppState>,
-) -> Result<Entity, String> {
+) -> Result<DuplicateEntityResult, String> {
     let mut entities = state.entities.lock().unwrap();
+    let mut markers = state.markers.lock().unwrap();
 
     // Get the source entity
     let source_entity = entities
@@ -359,9 +411,91 @@ fn duplicate_entity(
         field_metadata: source_entity.field_metadata.clone(),
     };
 
-    entities.insert(new_entity.id.clone(), new_entity.clone());
+    let new_entity_id = new_entity.id.clone();
+    entities.insert(new_entity_id.clone(), new_entity.clone());
 
-    Ok(new_entity)
+    // Get the current state of the source entity at cursor position
+    let relevant_markers: Vec<_> = markers
+        .values()
+        .filter(|m| m.entity_id == entity_id && m.position <= cursor_position)
+        .collect();
+
+    if !relevant_markers.is_empty() {
+        // Compute the current state by applying all markers
+        let mut current_state = serde_json::Map::new();
+        let mut sorted_markers = relevant_markers.clone();
+        sorted_markers.sort_by_key(|m| m.position);
+
+        for marker in sorted_markers {
+            for change in &marker.changes {
+                match &change.change_type {
+                    ChangeType::Remove => {
+                        remove_nested_value(&mut current_state, &change.field_name);
+                    }
+                    ChangeType::Absolute => {
+                        let value = if let Ok(num) = change.value.parse::<f64>() {
+                            serde_json::json!(num)
+                        } else if change.value == "true" || change.value == "false" {
+                            serde_json::json!(change.value.parse::<bool>().unwrap())
+                        } else {
+                            serde_json::json!(change.value)
+                        };
+                        set_nested_value(&mut current_state, &change.field_name, value);
+                    }
+                    ChangeType::Relative => {
+                        let value = if let Ok(delta) = change.value.parse::<f64>() {
+                            let current_val = get_nested_value(&current_state, &change.field_name)
+                                .and_then(|v| v.as_f64())
+                                .unwrap_or(0.0);
+                            serde_json::json!(current_val + delta)
+                        } else {
+                            serde_json::json!(change.value)
+                        };
+                        set_nested_value(&mut current_state, &change.field_name, value);
+                    }
+                }
+            }
+        }
+
+        // Convert the computed state into field changes (all absolute values)
+        let mut changes = Vec::new();
+        flatten_state_to_changes(&current_state, String::new(), &mut changes);
+
+        // Create an initial marker for the new entity at cursor position
+        if !changes.is_empty() {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs() as i64;
+
+            let marker = Marker {
+                id: uuid::Uuid::new_v4().to_string(),
+                position: cursor_position,
+                entity_id: new_entity_id.clone(),
+                changes,
+                visual: MarkerVisual {
+                    icon: "📋".to_string(),
+                    color: source_entity.color.clone(),
+                },
+                description: format!("Duplicated from {}", source_entity.name),
+                created_at: now,
+                modified_at: now,
+            };
+
+            let marker_clone = marker.clone();
+            markers.insert(marker.id.clone(), marker);
+
+            return Ok(DuplicateEntityResult {
+                entity: new_entity,
+                marker: Some(marker_clone),
+            });
+        }
+    }
+
+    Ok(DuplicateEntityResult {
+        entity: new_entity,
+        marker: None,
+    })
 }
 
 // Tauri command to completely delete a field from an entity and all its markers

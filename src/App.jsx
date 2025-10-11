@@ -21,6 +21,7 @@ import Editor from './components/Editor'
 import Sidebar from './components/Sidebar'
 import MarkerDialog from './components/MarkerDialog'
 import StatusBar from './components/StatusBar'
+import { checkForUpdates, ignoreUpdate } from './utils/updateChecker'
 import logo from './QuestScribeLogo.png'
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
   const [isMarkerDialogOpen, setIsMarkerDialogOpen] = useState(false)
   const [editingMarker, setEditingMarker] = useState(null)
   const [currentFilePath, setCurrentFilePath] = useState(null)
+  const [updateInfo, setUpdateInfo] = useState(null)
   const editorRef = useRef(null)
 
   // Apply dark mode class to body
@@ -46,6 +48,17 @@ function App() {
   // Load entities on startup
   useEffect(() => {
     loadEntities()
+  }, [])
+
+  // Check for updates on startup
+  useEffect(() => {
+    const checkUpdates = async () => {
+      const update = await checkForUpdates()
+      if (update) {
+        setUpdateInfo(update)
+      }
+    }
+    checkUpdates()
   }, [])
 
   // Load markers when editor is ready
@@ -292,6 +305,13 @@ function App() {
     }
   }, [cursorPosition])
 
+  const handleIgnoreUpdate = useCallback(() => {
+    if (updateInfo) {
+      ignoreUpdate(updateInfo.version)
+      setUpdateInfo(null)
+    }
+  }, [updateInfo])
+
   return (
     <div className="app">
       <div className="toolbar">
@@ -326,6 +346,7 @@ function App() {
           cursorPosition={cursorPosition}
           onEntityChange={setCurrentEntity}
           onEntitiesRefresh={loadEntities}
+          editorRef={editorRef}
           onInsertCharacterSheet={handleInsertCharacterSheet}
         />
       </div>
@@ -336,6 +357,8 @@ function App() {
         onNextChapter={handleNextChapter}
         onPreviousMarker={handlePreviousMarker}
         onNextMarker={handleNextMarker}
+        updateInfo={updateInfo}
+        onIgnoreUpdate={handleIgnoreUpdate}
       />
 
       <MarkerDialog

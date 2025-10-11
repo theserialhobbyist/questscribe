@@ -1091,6 +1091,68 @@ body.dark-mode .nav-button:active {
   background-color: #555;
 }
 
+/* Update Notification Styles */
+.update-notification {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.update-button {
+  padding: 4px 12px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background-color 0.2s;
+}
+
+.update-button:hover {
+  background-color: #45a049;
+}
+
+.ignore-update-button {
+  padding: 4px 8px;
+  background-color: transparent;
+  color: #666;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.ignore-update-button:hover {
+  background-color: #f5f5f5;
+  color: #333;
+  border-color: #999;
+}
+
+body.dark-mode .update-button {
+  background-color: #45a049;
+}
+
+body.dark-mode .update-button:hover {
+  background-color: #4CAF50;
+}
+
+body.dark-mode .ignore-update-button {
+  color: #999;
+  border-color: #4d4d4d;
+}
+
+body.dark-mode .ignore-update-button:hover {
+  background-color: #3d3d3d;
+  color: #e0e0e0;
+  border-color: #5d5d5d;
+}
+
 /* Context Menu Styles */
 .context-menu {
   position: fixed;

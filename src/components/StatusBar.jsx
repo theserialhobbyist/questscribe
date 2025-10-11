@@ -1,6 +1,13 @@
 import React from 'react'
+import { open } from '@tauri-apps/api/shell'
 
-function StatusBar({ wordCount, onPreviousChapter, onNextChapter, onPreviousMarker, onNextMarker }) {
+function StatusBar({ wordCount, onPreviousChapter, onNextChapter, onPreviousMarker, onNextMarker, updateInfo, onIgnoreUpdate }) {
+  const handleUpdateClick = () => {
+    if (updateInfo) {
+      open(updateInfo.url)
+    }
+  }
+
   return (
     <div className="status-bar">
       <div className="status-bar-section">
@@ -44,6 +51,25 @@ function StatusBar({ wordCount, onPreviousChapter, onNextChapter, onPreviousMark
           </button>
         </div>
       </div>
+
+      {updateInfo && (
+        <div className="status-bar-section update-notification">
+          <button
+            className="update-button"
+            onClick={handleUpdateClick}
+            title={`Update available: ${updateInfo.version}`}
+          >
+            🔄 Update
+          </button>
+          <button
+            className="ignore-update-button"
+            onClick={onIgnoreUpdate}
+            title="Ignore this update"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   )
 }

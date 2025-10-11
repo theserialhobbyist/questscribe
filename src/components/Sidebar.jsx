@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/tauri'
 import { ask } from '@tauri-apps/api/dialog'
 
-function Sidebar({ entities, currentEntity, cursorPosition, onEntityChange, onEntitiesRefresh, onInsertCharacterSheet }) {
+function Sidebar({ entities, currentEntity, cursorPosition, onEntityChange, onEntitiesRefresh, editorRef, onInsertCharacterSheet }) {
   const [entityState, setEntityState] = useState(null)
   const [loading, setLoading] = useState(false)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
@@ -90,6 +90,17 @@ function Sidebar({ entities, currentEntity, cursorPosition, onEntityChange, onEn
         color: editColor
       })
 
+      // Update all markers in the editor to reflect the new color
+      if (editorRef?.current) {
+        const allMarkers = await invoke('get_all_markers')
+        // Update all markers for this entity
+        allMarkers.forEach(marker => {
+          if (marker.entity_id === editingEntity) {
+            editorRef.current.updateMarker(marker)
+          }
+        })
+      }
+
       setEditingEntity(null)
       setEditName('')
       setEditColor('#FFD700')
@@ -148,9 +159,10 @@ function Sidebar({ entities, currentEntity, cursorPosition, onEntityChange, onEn
     }
 
     try {
-      const newEntity = await invoke('duplicate_entity', {
+      const result = await invoke('duplicate_entity', {
         entityId,
-        newName: newName.trim()
+        newName: newName.trim(),
+        cursorPosition
       })
 
       // Refresh the entities list
@@ -158,8 +170,13 @@ function Sidebar({ entities, currentEntity, cursorPosition, onEntityChange, onEn
         await onEntitiesRefresh()
       }
 
+      // Insert the new marker into the editor if one was created
+      if (result.marker && editorRef?.current) {
+        editorRef.current.insertMarker(result.marker)
+      }
+
       // Select the newly duplicated character
-      onEntityChange(newEntity.id)
+      onEntityChange(result.entity.id)
     } catch (error) {
       console.error('Failed to duplicate character:', error)
       alert('Failed to duplicate character: ' + error)
