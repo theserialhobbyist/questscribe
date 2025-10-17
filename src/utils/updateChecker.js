@@ -4,7 +4,7 @@
  */
 
 const GITHUB_REPO = 'theserialhobbyist/questscribe'
-const CURRENT_VERSION = '0.1.1'
+const CURRENT_VERSION = '0.2.0'
 
 /**
  * Compares two semantic version strings
