@@ -23,7 +23,8 @@
       "Bash(git tag:*)",
       "Bash(gh run list:*)",
       "Bash(git rm:*)",
-      "Bash(python -c \"import yaml; yaml.safe_load(open(''release.yml''))\")"
+      "Bash(python -c \"import yaml; yaml.safe_load(open(''release.yml''))\")",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

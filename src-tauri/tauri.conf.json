@@ -20,7 +20,17 @@
         "all": false,
         "open": true,
         "save": true,
-        "ask": true
+        "ask": true,
+        "confirm": true,
+        "message": true
+      },
+      "window": {
+        "all": false,
+        "close": true,
+        "hide": true,
+        "show": true,
+        "center": true,
+        "setFocus": true
       },
       "fs": {
         "all": false,

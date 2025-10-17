@@ -1,7 +1,18 @@
 import React from 'react'
 import { open } from '@tauri-apps/api/shell'
 
-function StatusBar({ wordCount, onPreviousChapter, onNextChapter, onPreviousMarker, onNextMarker, updateInfo, onIgnoreUpdate }) {
+function StatusBar({
+  wordCount,
+  onPreviousChapter,
+  onNextChapter,
+  onPreviousMarker,
+  onNextMarker,
+  updateInfo,
+  onIgnoreUpdate,
+  hasUnsavedChanges,
+  autoSaveEnabled,
+  onToggleAutoSave
+}) {
   const handleUpdateClick = () => {
     if (updateInfo) {
       open(updateInfo.url)
@@ -12,6 +23,23 @@ function StatusBar({ wordCount, onPreviousChapter, onNextChapter, onPreviousMark
     <div className="status-bar">
       <div className="status-bar-section">
         <span className="word-count">Words: {wordCount.toLocaleString()}</span>
+        <span className="status-separator">|</span>
+        <div className="unsaved-indicator">
+          {hasUnsavedChanges ? (
+            <span className="unsaved-changes">● Unsaved changes</span>
+          ) : (
+            <span className="saved">Saved</span>
+          )}
+        </div>
+        <span className="status-separator">|</span>
+        <label className="autosave-toggle">
+          <input
+            type="checkbox"
+            checked={autoSaveEnabled}
+            onChange={onToggleAutoSave}
+          />
+          <span className="autosave-label">Autosave</span>
+        </label>
       </div>
 
       <div className="status-bar-section">

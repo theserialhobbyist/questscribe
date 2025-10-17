@@ -8,12 +8,14 @@ import { history, undo, redo } from 'prosemirror-history'
 import { baseKeymap, toggleMark } from 'prosemirror-commands'
 import { Plugin } from 'prosemirror-state'
 import { AllSelection } from 'prosemirror-state'
+import { Decoration, DecorationSet } from 'prosemirror-view'
 import { invoke } from '@tauri-apps/api/tauri'
 import EditorToolbar from './EditorToolbar'
 import ContextMenu from './ContextMenu'
+import { initSpellChecker, checkWord, getSuggestions, addToCustomDictionary } from '../utils/spellChecker'
 import 'prosemirror-view/style/prosemirror.css'
 
-const Editor = forwardRef(({ onCursorMove, onWordCountChange, onEditorReady, onInsertStateChange }, ref) => {
+const Editor = forwardRef(({ onCursorMove, onWordCountChange, onDocumentChange, onEditorReady, onInsertStateChange }, ref) => {
   const editorRef = useRef(null)
   const viewRef = useRef(null)
   const [editorView, setEditorView] = useState(null)
@@ -290,6 +292,58 @@ const Editor = forwardRef(({ onCursorMove, onWordCountChange, onEditorReady, onI
     }
   }))
 
+  // Plugin to add red underlines to misspelled words
+  const spellCheckPlugin = new Plugin({
+    state: {
+      init(_, { doc }) {
+        return findMisspelledWords(doc)
+      },
+      apply(tr, oldDecorations) {
+        // Only recompute if document changed
+        if (tr.docChanged) {
+          return findMisspelledWords(tr.doc)
+        }
+        // Map decorations through changes
+        return oldDecorations.map(tr.mapping, tr.doc)
+      }
+    },
+    props: {
+      decorations(state) {
+        return this.getState(state)
+      }
+    }
+  })
+
+  // Helper function to find misspelled words in the document
+  function findMisspelledWords(doc) {
+    const decorations = []
+    const wordRegex = /\b[a-zA-Z]+\b/g
+
+    doc.descendants((node, pos) => {
+      if (node.isText) {
+        const text = node.text
+        let match
+
+        while ((match = wordRegex.exec(text)) !== null) {
+          const word = match[0]
+          const from = pos + match.index
+          const to = from + word.length
+
+          // Check if word is misspelled
+          if (!checkWord(word)) {
+            decorations.push(
+              Decoration.inline(from, to, {
+                class: 'spelling-error'
+              })
+            )
+          }
+        }
+      }
+    })
+
+    return DecorationSet.create(doc, decorations)
+  }
+
   // Plugin to handle marker node interactions and sync positions to backend
   const markerPlugin = new Plugin({
     props: {
@@ -368,6 +422,11 @@ const Editor = forwardRef(({ onCursorMove, onWordCountChange, onEditorReady, onI
     }
   })
 
+  // Initialize spell checker
+  useEffect(() => {
+    initSpellChecker()
+  }, [])
+
   useEffect(() => {
     // Only initialize once
     if (!editorRef.current || viewRef.current) return
@@ -400,6 +459,7 @@ const Editor = forwardRef(({ onCursorMove, onWordCountChange, onEditorReady, onI
           'Mod-i': toggleMark(markerSchema.marks.em),
         }),
         keymap(baseKeymap),
+        spellCheckPlugin,
         markerPlugin,
       ],
     })
@@ -417,10 +477,16 @@ const Editor = forwardRef(({ onCursorMove, onWordCountChange, onEditorReady, onI
         }
 
         // Update word count if document changed
-        if (transaction.docChanged && onWordCountChange) {
-          const text = newState.doc.textContent
-          const words = text.trim().split(/\s+/).filter(w => w.length > 0)
-          onWordCountChange(words.length)
+        if (transaction.docChanged) {
+          if (onWordCountChange) {
+            const text = newState.doc.textContent
+            const words = text.trim().split(/\s+/).filter(w => w.length > 0)
+            onWordCountChange(words.length)
+          }
+          // Notify parent that document changed
+          if (onDocumentChange) {
+            onDocumentChange()
+          }
         }
       },
     })
@@ -467,6 +533,7 @@ const Editor = forwardRef(({ onCursorMove, onWordCountChange, onEditorReady, onI
       <div
         ref={editorRef}
         className="editor"
+        spellCheck={false}
         onContextMenu={(e) => {
           e.preventDefault()
           e.stopPropagation()
@@ -495,8 +562,87 @@ const Editor = forwardRef(({ onCursorMove, onWordCountChange, onEditorReady, onI
             }
           }
 
+          // Check for misspelled word at cursor position
+          let misspelledWord = null
+          let wordRange = null
+
+          // Get the word at the clicked position
+          const $pos = view.state.doc.resolve(pos.pos)
+          const textNode = $pos.parent.maybeChild($pos.index())
+
+          if (textNode && textNode.isText) {
+            const text = textNode.text
+            const offset = pos.pos - $pos.start()
+
+            // Find word boundaries
+            let start = offset
+            let end = offset
+
+            // Move start back to word beginning
+            while (start > 0 && /\w/.test(text[start - 1])) {
+              start--
+            }
+
+            // Move end forward to word end
+            while (end < text.length && /\w/.test(text[end])) {
+              end++
+            }
+
+            if (start < end) {
+              const word = text.substring(start, end)
+
+              // Check if word is misspelled
+              if (!checkWord(word)) {
+                misspelledWord = word
+                wordRange = {
+                  from: $pos.start() + start,
+                  to: $pos.start() + end
+                }
+              }
+            }
+          }
+
           // Build context menu items
           const menuItems = []
+
+          // Add spelling suggestions if word is misspelled
+          if (misspelledWord && wordRange) {
+            const suggestions = getSuggestions(misspelledWord)
+
+            if (suggestions.length > 0) {
+              suggestions.forEach(suggestion => {
+                menuItems.push({
+                  icon: '✓',
+                  label: suggestion,
+                  action: () => {
+                    // Replace the misspelled word with the suggestion
+                    const tr = view.state.tr.replaceWith(
+                      wordRange.from,
+                      wordRange.to,
+                      view.state.schema.text(suggestion)
+                    )
+                    view.dispatch(tr)
+                    view.focus()
+                  }
+                })
+              })
+
+              menuItems.push({ divider: true })
+            }
+
+            // Add "Add to Dictionary" option
+            menuItems.push({
+              icon: '📖',
+              label: `Add "${misspelledWord}" to Dictionary`,
+              action: () => {
+                addToCustomDictionary(misspelledWord)
+                // Force a re-render to remove the red underline
+                view.focus()
+              }
+            })
+
+            menuItems.push({ divider: true })
+          }
 
           if (clickedMarker) {
             // Marker-specific menu

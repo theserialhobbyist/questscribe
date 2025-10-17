@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="QuestScribeLogo_whiteBG.png" alt="QuestScribe Logo" width="500"/>
+<img src="QuestScribeLogo2_banner.png" alt="QuestScribe Logo" width="500"/>
 
 # QuestScribe
 
@@ -16,7 +16,14 @@ A specialized word processor for writing LitRPG novels with **dynamic character 
 
 </div>
 
----
+
+## Download here: [Releases](https://github.com/theserialhobbyist/questscribe/releases)
+
+By [Cameron Coward](https://cameroncoward.com)
+
+Check out [Serial Hobbyism](https://www.youtube.com/@serialhobbyism_official)
+
+Support on [Patreon](https://www.patreon.com/c/serialhobbyism)
 
 ## What is QuestScribe?
 

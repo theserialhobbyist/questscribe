@@ -16,7 +16,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/tauri'
-import { open, save } from '@tauri-apps/api/dialog'
+import { open, save, ask, message as showMessage } from '@tauri-apps/api/dialog'
+import { appWindow } from '@tauri-apps/api/window'
 import Editor from './components/Editor'
 import Sidebar from './components/Sidebar'
 import MarkerDialog from './components/MarkerDialog'
@@ -34,7 +35,12 @@ function App() {
   const [editingMarker, setEditingMarker] = useState(null)
   const [currentFilePath, setCurrentFilePath] = useState(null)
   const [updateInfo, setUpdateInfo] = useState(null)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(false)
   const editorRef = useRef(null)
+  const autoSaveTimerRef = useRef(null)
+  const lastSavedContentRef = useRef('')
+  const hasUnsavedChangesRef = useRef(false)
 
   // Apply dark mode class to body
   useEffect(() => {
@@ -92,6 +98,12 @@ function App() {
     }
   }, [currentEntity])
 
+  // Track document changes for unsaved indicator
+  const handleDocumentChange = useCallback(() => {
+    setHasUnsavedChanges(true)
+    hasUnsavedChangesRef.current = true
+  }, [])
+
   // Use useCallback to prevent function from being recreated on every render
   const handleCursorMove = useCallback((position) => {
     setCursorPosition(position)
@@ -139,25 +151,39 @@ function App() {
   }, [handleEditMarker])
 
   const handleNewDocument = useCallback(async () => {
-    if (confirm('Create new document? Any unsaved changes will be lost.')) {
-      try {
-        await invoke('new_document')
-        // Clear editor
-        if (editorRef.current) {
-          editorRef.current.clearDocument()
-        }
-        // Clear current file path
-        setCurrentFilePath(null)
-        // Reload entities (should be empty now)
-        await loadEntities()
-      } catch (error) {
-        console.error('Failed to create new document:', error)
-        alert('Failed to create new document: ' + error)
-      }
+    // Only warn if there are unsaved changes
+    if (hasUnsavedChanges) {
+      const proceed = await ask('You have unsaved changes. Create new document anyway? All unsaved changes will be lost.', {
+        title: 'Unsaved Changes',
+        type: 'warning'
+      })
+      if (!proceed) return
     }
-  }, [])
 
-  const handleSaveDocument = useCallback(async () => {
+    try {
+      await invoke('new_document')
+      // Clear editor
+      if (editorRef.current) {
+        editorRef.current.clearDocument()
+      }
+      // Clear current file path
+      setCurrentFilePath(null)
+      // Reset saved content and unsaved changes
+      lastSavedContentRef.current = ''
+      setHasUnsavedChanges(false)
+      hasUnsavedChangesRef.current = false
+      // Reload entities (should be empty now)
+      await loadEntities()
+    } catch (error) {
+      console.error('Failed to create new document:', error)
+      await showMessage('Failed to create new document: ' + error, {
+        title: 'Error',
+        type: 'error'
+      })
+    }
+  }, [hasUnsavedChanges, loadEntities])
+
+  const handleSaveDocument = useCallback(async (silent = false) => {
     try {
       // If we have a current file, save to it directly
       if (currentFilePath) {
@@ -166,14 +192,21 @@ function App() {
           filePath: currentFilePath,
           content
         })
-        alert('Document saved successfully!')
+        lastSavedContentRef.current = content
+        setHasUnsavedChanges(false)
+        hasUnsavedChangesRef.current = false
+        if (!silent) {
+          alert('Document saved successfully!')
+        }
       } else {
         // Otherwise, show save dialog (Save As)
         await handleSaveAsDocument()
       }
     } catch (error) {
       console.error('Failed to save document:', error)
-      alert('Failed to save document: ' + error)
+      if (!silent) {
+        alert('Failed to save document: ' + error)
+      }
     }
   }, [currentFilePath])
 
@@ -196,6 +229,9 @@ function App() {
           content
         })
         setCurrentFilePath(filePath)
+        lastSavedContentRef.current = content
+        setHasUnsavedChanges(false)
+        hasUnsavedChangesRef.current = false
         alert('Document saved successfully!')
       }
     } catch (error) {
@@ -206,6 +242,15 @@ function App() {
 
   const handleLoadDocument = useCallback(async () => {
     try {
+      // Warn if there are unsaved changes
+      if (hasUnsavedChanges) {
+        const proceed = await ask('You have unsaved changes. Open a different document anyway? All unsaved changes will be lost.', {
+          title: 'Unsaved Changes',
+          type: 'warning'
+        })
+        if (!proceed) return
+      }
+
       // Show open dialog
       const filePath = await open({
         filters: [{
@@ -225,16 +270,22 @@ function App() {
         // Save the current file path
         setCurrentFilePath(filePath)
 
+        // Update saved content reference and clear unsaved changes
+        lastSavedContentRef.current = document.content
+        setHasUnsavedChanges(false)
+        hasUnsavedChangesRef.current = false
+
         // Reload entities only (markers are already in the document)
         await loadEntities()
-
-        alert('Document loaded successfully!')
       }
     } catch (error) {
       console.error('Failed to load document:', error)
-      alert('Failed to load document: ' + error)
+      await showMessage('Failed to load document: ' + error, {
+        title: 'Error',
+        type: 'error'
+      })
     }
-  }, [loadEntities])
+  }, [hasUnsavedChanges, loadEntities])
 
 
   const handleExportDocument = useCallback(async () => {
@@ -312,6 +363,87 @@ function App() {
     }
   }, [updateInfo])
 
+  const handleToggleAutoSave = useCallback(() => {
+    setAutoSaveEnabled(prev => !prev)
+  }, [])
+
+  // Autosave effect - runs every 3 minutes if enabled and there are unsaved changes
+  useEffect(() => {
+    if (autoSaveEnabled && hasUnsavedChanges && currentFilePath) {
+      // Set up interval for 3 minutes (180000 ms)
+      autoSaveTimerRef.current = setInterval(() => {
+        if (hasUnsavedChanges && currentFilePath) {
+          handleSaveDocument(true) // silent save
+        }
+      }, 180000) // 3 minutes
+
+      return () => {
+        if (autoSaveTimerRef.current) {
+          clearInterval(autoSaveTimerRef.current)
+        }
+      }
+    }
+  }, [autoSaveEnabled, hasUnsavedChanges, currentFilePath, handleSaveDocument])
+
+  // Prevent window close if there are unsaved changes
+  // Register only once on mount
+  useEffect(() => {
+    let unlisten = null
+    let isAsking = false
+
+    const setupCloseHandler = async () => {
+      try {
+        unlisten = await appWindow.onCloseRequested(async (event) => {
+          // Always prevent default first
+          event.preventDefault()
+
+          // If we're already asking, don't show another dialog
+          if (isAsking) return
+
+          // Use ref to get current value
+          if (hasUnsavedChangesRef.current) {
+            isAsking = true
+            try {
+              const proceed = await ask('You have unsaved changes. Close anyway? All unsaved changes will be lost.', {
+                title: 'Unsaved Changes',
+                type: 'warning'
+              })
+
+              if (proceed) {
+                // Unregister the handler to avoid recursive calls
+                if (unlisten) {
+                  unlisten()
+                  unlisten = null
+                }
+                // Force close the window
+                await appWindow.close()
+              }
+            } finally {
+              isAsking = false
+            }
+          } else {
+            // No unsaved changes, allow close
+            if (unlisten) {
+              unlisten()
+              unlisten = null
+            }
+            await appWindow.close()
+          }
+        })
+      } catch (error) {
+        console.error('Failed to setup close handler:', error)
+      }
+    }
+
+    setupCloseHandler()
+
+    return () => {
+      if (unlisten && typeof unlisten === 'function') {
+        unlisten()
+      }
+    }
+  }, []) // Empty dependency array - only run once
+
   return (
     <div className="app">
       <div className="toolbar">
@@ -336,6 +468,7 @@ function App() {
           ref={editorRef}
           onCursorMove={handleCursorMove}
           onWordCountChange={handleWordCountChange}
+          onDocumentChange={handleDocumentChange}
           onEditorReady={handleEditorReady}
           onInsertStateChange={() => setIsMarkerDialogOpen(true)}
         />
@@ -359,6 +492,9 @@ function App() {
         onNextMarker={handleNextMarker}
         updateInfo={updateInfo}
         onIgnoreUpdate={handleIgnoreUpdate}
+        hasUnsavedChanges={hasUnsavedChanges}
+        autoSaveEnabled={autoSaveEnabled}
+        onToggleAutoSave={handleToggleAutoSave}
       />
 
       <MarkerDialog

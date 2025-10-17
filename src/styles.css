@@ -218,7 +218,7 @@ body.dark-mode .btn-danger {
 }
 
 .toolbar .app-logo {
-  height: 32px;
+  height: 64px;
   margin-right: 20px;
   object-fit: contain;
 }
@@ -315,6 +315,15 @@ body.dark-mode .btn-danger {
 
 .ProseMirror p {
   margin-bottom: 1em;
+}
+
+/* Spelling Error Underline */
+.ProseMirror .spelling-error {
+  text-decoration: underline;
+  text-decoration-color: #ff0000;
+  text-decoration-style: wavy;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
 }
 
 .ProseMirror .dinkus {
@@ -1033,6 +1042,48 @@ body.dark-mode .color-option-tiny.selected {
   color: #666;
 }
 
+.status-separator {
+  color: #ccc;
+  margin: 0 10px;
+}
+
+.unsaved-indicator {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+}
+
+.unsaved-changes {
+  color: #dc3545;
+  font-weight: 500;
+}
+
+.saved {
+  color: #28a745;
+  font-weight: 500;
+}
+
+.autosave-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #666;
+  user-select: none;
+}
+
+.autosave-toggle input[type="checkbox"] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.autosave-label {
+  cursor: pointer;
+}
+
 .nav-group {
   display: flex;
   align-items: center;
@@ -1073,6 +1124,22 @@ body.dark-mode .status-bar {
 
 body.dark-mode .word-count,
 body.dark-mode .nav-label {
+  color: #999;
+}
+
+body.dark-mode .status-separator {
+  color: #555;
+}
+
+body.dark-mode .unsaved-changes {
+  color: #ff6b6b;
+}
+
+body.dark-mode .saved {
+  color: #51cf66;
+}
+
+body.dark-mode .autosave-toggle {
   color: #999;
 }
 
